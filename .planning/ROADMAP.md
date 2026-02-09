@@ -4,7 +4,11 @@
 
 ### Phase 1: Foundation & Testing Infrastructure
 **Goal:** Establish test framework and deduplicate utilities to enable safe refactoring.
-**Plans:** 2-3
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Shared utility package, deduplication, config cleanup, and utility tests
+- [ ] 01-02-PLAN.md -- Printer interface abstraction, reporter refactor, and printer tests
 
 **Scope:**
 - Add Go testing framework with testify dependency
@@ -124,7 +128,7 @@
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1: Foundation & Testing Infrastructure | Pending | 0% |
+| Phase 1: Foundation & Testing Infrastructure | Planned | 0% |
 | Phase 2: Kubernetes Abstraction Layer | Pending | 0% |
 | Phase 3: Plugin Restructuring | Pending | 0% |
 | Phase 4: Build & Release Automation | Pending | 0% |
