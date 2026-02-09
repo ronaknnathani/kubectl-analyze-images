@@ -1,23 +1,47 @@
 package reporter
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"text/tabwriter"
+	"strconv"
 
-	"github.com/rnathani/kubectl-analyze-images/pkg/types"
+	"github.com/olekukonko/tablewriter"
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/util"
 )
 
 // Reporter handles output generation
 type Reporter struct {
-	outputFormat string
+	outputFormat  string
+	showHistogram bool
+	noColor       bool
+	topImages     int
 }
 
 // NewReporter creates a new reporter
 func NewReporter(outputFormat string) *Reporter {
 	return &Reporter{
-		outputFormat: outputFormat,
+		outputFormat:  outputFormat,
+		showHistogram: true, // Make histogram default
+		noColor:       false,
+		topImages:     25, // Default to 25 top images
 	}
+}
+
+// SetShowHistogram enables or disables histogram display
+func (r *Reporter) SetShowHistogram(show bool) {
+	r.showHistogram = show
+}
+
+// SetNoColor enables or disables colored output
+func (r *Reporter) SetNoColor(noColor bool) {
+	r.noColor = noColor
+}
+
+// SetTopImages sets the number of top images to display
+func (r *Reporter) SetTopImages(count int) {
+	r.topImages = count
 }
 
 // GenerateReport generates a report from image analysis
@@ -32,78 +56,105 @@ func (r *Reporter) GenerateReport(analysis *types.ImageAnalysis) error {
 	}
 }
 
-// generateTableReport generates a table-formatted report
+// generateTableReport generates a table-formatted report using tablewriter
 func (r *Reporter) generateTableReport(analysis *types.ImageAnalysis) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	defer w.Flush()
+	// Performance Summary
+	if analysis.Performance != nil {
+		fmt.Println("Performance Summary")
+		fmt.Println("==================")
 
-	// Summary
-	fmt.Fprintf(w, "Image Analysis Summary\n")
-	fmt.Fprintf(w, "=====================\n")
-	fmt.Fprintf(w, "Total Images:\t%d\n", len(analysis.Images))
-	fmt.Fprintf(w, "Total Size:\t%s\n", formatBytes(analysis.TotalSize))
-	fmt.Fprintf(w, "Unique Size:\t%s\n", formatBytes(analysis.UniqueSize))
-	fmt.Fprintf(w, "\n")
-
-	// Top 25 images by size
-	fmt.Fprintf(w, "Top 25 Images by Size\n")
-	fmt.Fprintf(w, "=====================\n")
-	fmt.Fprintf(w, "Image\tSize\tRegistry\tTag\n")
-	fmt.Fprintf(w, "-----\t----\t--------\t---\n")
-
-	topImages := analysis.GetTopImagesBySize(25)
-	for _, img := range topImages {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			img.Name,
-			formatBytes(img.Size),
-			img.Registry,
-			img.Tag)
-	}
-
-	return nil
-}
-
-// generateJSONReport generates a JSON-formatted report
-func (r *Reporter) generateJSONReport(analysis *types.ImageAnalysis) error {
-	// For Phase 1, we'll implement a simple JSON output
-	// In later phases, we'll use proper JSON marshaling
-	fmt.Printf("{\n")
-	fmt.Printf("  \"summary\": {\n")
-	fmt.Printf("    \"totalImages\": %d,\n", len(analysis.Images))
-	fmt.Printf("    \"totalSize\": %d,\n", analysis.TotalSize)
-	fmt.Printf("    \"uniqueSize\": %d\n", analysis.UniqueSize)
-	fmt.Printf("  },\n")
-	fmt.Printf("  \"images\": [\n")
-
-	for i, img := range analysis.Images {
-		fmt.Printf("    {\n")
-		fmt.Printf("      \"name\": \"%s\",\n", img.Name)
-		fmt.Printf("      \"size\": %d,\n", img.Size)
-		fmt.Printf("      \"registry\": \"%s\",\n", img.Registry)
-		fmt.Printf("      \"tag\": \"%s\"\n", img.Tag)
-		if i < len(analysis.Images)-1 {
-			fmt.Printf("    },\n")
-		} else {
-			fmt.Printf("    }\n")
+		performanceTable := tablewriter.NewWriter(os.Stdout)
+		performanceTable.Header("Metric", "Value")
+		if analysis.Performance.PodQueryTime > 0 {
+			performanceTable.Append("Pod Query Time", analysis.Performance.PodQueryTime.String())
 		}
+		if analysis.Performance.NodeQueryTime > 0 {
+			performanceTable.Append("Node Query Time", analysis.Performance.NodeQueryTime.String())
+		}
+		performanceTable.Append("Image Analysis Time", analysis.Performance.ImageAnalysisTime.String())
+		performanceTable.Append("Total Time", analysis.Performance.TotalTime.String())
+		performanceTable.Append("Images Processed", strconv.Itoa(analysis.Performance.ImagesProcessed))
+		performanceTable.Render()
+		fmt.Println()
 	}
 
-	fmt.Printf("  ]\n")
-	fmt.Printf("}\n")
+	// Image Analysis Summary
+	fmt.Println("Image Analysis Summary")
+	fmt.Println("=====================")
+
+	summaryTable := tablewriter.NewWriter(os.Stdout)
+	summaryTable.Header("Metric", "Value")
+	summaryTable.Append("Total Images", strconv.Itoa(len(analysis.Images)))
+	summaryTable.Append("Unique Images", strconv.Itoa(len(analysis.GetUniqueImages())))
+	summaryTable.Append("Total Size", util.FormatBytes(analysis.TotalSize))
+	summaryTable.Render()
+	fmt.Println()
+
+	// Image Size Distribution Histogram (if requested and we have images)
+	if r.showHistogram && len(analysis.Images) > 0 {
+		fmt.Println("Image Size Distribution")
+		fmt.Println("=======================")
+
+		config := types.DefaultHistogramConfig()
+		config.Title = "Image Size Distribution"
+		config.Height = 15
+		config.Width = 60
+		config.ShowColors = !r.noColor // Disable colors if noColor flag is set
+
+		histogramData := analysis.GenerateImageSizeHistogram(config)
+		fmt.Print(histogramData.RenderASCII(config, analysis))
+	}
+
+	// Top images by size
+	if len(analysis.Images) > 0 {
+		fmt.Println()
+		fmt.Printf("Top %d Images by Size\n", r.topImages)
+		fmt.Println("=====================")
+
+		imageTable := tablewriter.NewWriter(os.Stdout)
+		imageTable.Header("Image", "Size")
+
+		topImages := analysis.GetTopImagesBySize(r.topImages)
+		for _, img := range topImages {
+			size := util.FormatBytes(img.Size)
+			if img.Inaccessible {
+				size = "INACCESSIBLE"
+			}
+			imageTable.Append(img.Name, size)
+		}
+		imageTable.Render()
+		fmt.Println()
+	}
 
 	return nil
 }
 
-// formatBytes formats bytes into human-readable format
-func formatBytes(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
+// generateJSONReport generates a JSON-formatted report using proper JSON marshaling
+func (r *Reporter) generateJSONReport(analysis *types.ImageAnalysis) error {
+	// Create a structured report for JSON marshaling
+	report := struct {
+		Performance *types.PerformanceMetrics `json:"performance,omitempty"`
+		Summary     struct {
+			TotalImages int   `json:"totalImages"`
+			TotalSize   int64 `json:"totalSize"`
+			UniqueSize  int64 `json:"uniqueSize"`
+		} `json:"summary"`
+		Images []types.Image `json:"images"`
+	}{
+		Performance: analysis.Performance,
+		Images:      analysis.Images,
 	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
+
+	report.Summary.TotalImages = len(analysis.Images)
+	report.Summary.TotalSize = analysis.TotalSize
+	report.Summary.UniqueSize = analysis.UniqueSize
+
+	// Marshal to JSON with proper formatting
+	jsonData, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+
+	fmt.Println(string(jsonData))
+	return nil
 }
