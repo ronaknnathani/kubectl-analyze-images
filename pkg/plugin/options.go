@@ -111,7 +111,7 @@ func (o *AnalyzeOptions) Run(ctx context.Context) error {
 	rep := reporter.NewReporter(o.OutputFormat)
 	rep.SetNoColor(o.NoColor)
 	rep.SetTopImages(o.TopImages)
-	if err := rep.GenerateReport(analysis); err != nil {
+	if err := rep.GenerateReportTo(o.Out, analysis); err != nil {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}
 
