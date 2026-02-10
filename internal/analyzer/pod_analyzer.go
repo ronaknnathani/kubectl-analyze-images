@@ -18,22 +18,12 @@ type PodAnalyzer struct {
 	config        *types.AnalysisConfig
 }
 
-// NewPodAnalyzer creates a new pod analyzer
-func NewPodAnalyzer() (*PodAnalyzer, error) {
-	return NewPodAnalyzerWithConfig(types.DefaultAnalysisConfig(), "")
-}
-
-// NewPodAnalyzerWithConfig creates a new pod analyzer with custom configuration
-func NewPodAnalyzerWithConfig(config *types.AnalysisConfig, contextName string) (*PodAnalyzer, error) {
-	clusterClient, err := cluster.NewClient(contextName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cluster client: %w", err)
-	}
-
+// NewPodAnalyzer creates a new pod analyzer with custom configuration
+func NewPodAnalyzer(clusterClient *cluster.Client, config *types.AnalysisConfig) *PodAnalyzer {
 	return &PodAnalyzer{
 		clusterClient: clusterClient,
 		config:        config,
-	}, nil
+	}
 }
 
 // AnalyzePods analyzes container images from pods
