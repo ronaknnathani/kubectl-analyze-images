@@ -112,7 +112,11 @@ Plans:
 
 ### Phase 5: Krew Distribution
 **Goal:** Package plugin for krew distribution with complete documentation and first public release.
-**Plans:** 1-2
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md -- LICENSE, krew manifest, SECURITY.md, CONTRIBUTING.md
+- [ ] 05-02-PLAN.md -- README polish with krew instructions and usage examples
 
 **Scope:**
 - Generate and validate krew plugin manifest
