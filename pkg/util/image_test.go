@@ -40,19 +40,19 @@ func TestExtractRegistryAndTag(t *testing.T) {
 		{
 			name:             "single component no registry",
 			imageName:        "nginx",
-			expectedRegistry: "unknown",
+			expectedRegistry: "docker.io",
 			expectedTag:      "latest",
 		},
 		{
 			name:             "single component with tag",
 			imageName:        "nginx:1.21",
-			expectedRegistry: "unknown",
-			expectedTag:      "latest",
+			expectedRegistry: "docker.io",
+			expectedTag:      "1.21",
 		},
 		{
 			name:             "empty string",
 			imageName:        "",
-			expectedRegistry: "unknown",
+			expectedRegistry: "docker.io",
 			expectedTag:      "latest",
 		},
 		{

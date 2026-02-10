@@ -135,7 +135,7 @@ func TestNewInaccessibleImage(t *testing.T) {
 			name:      "docker hub image",
 			imageName: "nginx:latest",
 			wantName:  "nginx:latest",
-			wantReg:   "unknown",
+			wantReg:   "docker.io",
 			wantTag:   "latest",
 		},
 	}
