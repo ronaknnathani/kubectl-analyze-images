@@ -31,7 +31,11 @@ Plans:
 
 ### Phase 2: Kubernetes Abstraction Layer
 **Goal:** Enable testable cluster interactions through interface-driven design.
-**Plans:** 2
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md -- Kubernetes interface definition with real and fake client implementations
+- [ ] 02-02-PLAN.md -- Refactor cluster/analyzer for dependency injection and add unit tests
 
 **Scope:**
 - Create `pkg/kubernetes/interface.go` defining ListPods(), ListNodes() methods
