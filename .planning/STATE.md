@@ -64,6 +64,11 @@ Progress: [====================] 100% (5/5 phases complete)
 - **Parallel CI**: Test and lint jobs run in parallel with build gated on both passing
 - **Release Safety**: Release workflow re-runs tests as safety gate before publishing
 
+### Phase 05 - Plan 01
+- **Vulnerability reporting**: GitHub issues with "security" label (personal project, no dedicated security email)
+- **SHA256 placeholders**: Using REPLACE_WITH_ACTUAL_SHA256 strings for release-time substitution
+- **Scope documentation**: Explicit read-only scope clarification in SECURITY.md
+
 ### Phase 05 - Plan 02
 - **Example Output**: Kept realistic example output from original README
 - **CONTRIBUTING/LICENSE links**: Referenced files with links even though they may not exist yet
@@ -85,12 +90,13 @@ None currently.
 | 03    | 02   | 148s     | 2     | 3             | 2026-02-10T03:47:43Z |
 | 04    | 01   | 113s     | 2     | 3             | 2026-02-10T03:58:24Z |
 | 04    | 02   | 82s      | 2     | 2             | 2026-02-10T03:57:50Z |
+| 05    | 01   | 128s     | 2     | 4             | 2026-02-10T04:09:15Z |
 | 05    | 02   | 67s      | 1     | 1             | 2026-02-10T04:08:17Z |
 
 ## Last Session
 
-**Stopped at:** Completed 05-02-PLAN.md
-**Timestamp:** 2026-02-10T04:08:17Z
+**Stopped at:** Completed 05-01-PLAN.md
+**Timestamp:** 2026-02-10T04:09:15Z
 
 ## Autonomous Execution
 
