@@ -15,25 +15,52 @@ A kubectl plugin that analyzes container image sizes across Kubernetes clusters 
 
 ## Installation
 
-### Via krew (recommended)
-
-```bash
-kubectl krew install analyze-images
-```
-
 ### From GitHub releases
 
-Download the latest release for your platform:
+Download the latest release for your platform from the
+[releases page](https://github.com/ronaknnathani/kubectl-analyze-images/releases).
+
+**macOS (Apple Silicon):**
 
 ```bash
-# Linux/macOS (amd64)
-curl -LO "https://github.com/ronaknnathani/kubectl-analyze-images/releases/latest/download/kubectl-analyze-images_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz"
-tar xzf kubectl-analyze-images_*.tar.gz
+curl -LO https://github.com/ronaknnathani/kubectl-analyze-images/releases/latest/download/kubectl-analyze-images_1.0.0_darwin_arm64.tar.gz
+tar xzf kubectl-analyze-images_1.0.0_darwin_arm64.tar.gz
 sudo mv kubectl-analyze-images /usr/local/bin/
 ```
 
-For other platforms, download the appropriate archive from the
-[releases page](https://github.com/ronaknnathani/kubectl-analyze-images/releases).
+**macOS (Intel):**
+
+```bash
+curl -LO https://github.com/ronaknnathani/kubectl-analyze-images/releases/latest/download/kubectl-analyze-images_1.0.0_darwin_amd64.tar.gz
+tar xzf kubectl-analyze-images_1.0.0_darwin_amd64.tar.gz
+sudo mv kubectl-analyze-images /usr/local/bin/
+```
+
+**Linux (amd64):**
+
+```bash
+curl -LO https://github.com/ronaknnathani/kubectl-analyze-images/releases/latest/download/kubectl-analyze-images_1.0.0_linux_amd64.tar.gz
+tar xzf kubectl-analyze-images_1.0.0_linux_amd64.tar.gz
+sudo mv kubectl-analyze-images /usr/local/bin/
+```
+
+**Linux (arm64):**
+
+```bash
+curl -LO https://github.com/ronaknnathani/kubectl-analyze-images/releases/latest/download/kubectl-analyze-images_1.0.0_linux_arm64.tar.gz
+tar xzf kubectl-analyze-images_1.0.0_linux_arm64.tar.gz
+sudo mv kubectl-analyze-images /usr/local/bin/
+```
+
+**Windows:** Download the `.zip` for your architecture from the [releases page](https://github.com/ronaknnathani/kubectl-analyze-images/releases) and add the binary to your PATH.
+
+### Via krew
+
+A krew plugin manifest is included at `plugins/analyze-images.yaml`. To install locally:
+
+```bash
+kubectl krew install --manifest=plugins/analyze-images.yaml
+```
 
 ### From source
 
@@ -44,20 +71,24 @@ make build
 make install
 ```
 
+Requires Go 1.23+ and golangci-lint.
+
 ## Usage
+
+Once installed in your PATH, kubectl automatically discovers the plugin. You can invoke it as either `kubectl analyze-images` or directly as `kubectl-analyze-images`.
 
 ```bash
 # Analyze all images in the cluster
 kubectl analyze-images
 
 # Analyze images in a specific namespace
-kubectl analyze-images --namespace=production
+kubectl analyze-images -n production
 
 # Filter by label selector
-kubectl analyze-images --namespace=production --selector="app=web"
+kubectl analyze-images -n production -l app=web
 
 # JSON output for scripting
-kubectl analyze-images --output=json
+kubectl analyze-images -o json
 
 # Use a specific kubectl context
 kubectl analyze-images --context=prod-cluster
@@ -65,128 +96,134 @@ kubectl analyze-images --context=prod-cluster
 # Show top 50 images (default is 25)
 kubectl analyze-images --top-images=50
 
-# Disable colored output
+# Disable colored output (useful for piping)
 kubectl analyze-images --no-color
 ```
 
-## Flags Reference
+### Flags
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--namespace` | `-n` | (all namespaces) | Target namespace |
 | `--selector` | `-l` | | Label selector for pods |
-| `--output` | `-o` | `table` | Output format: table, json |
+| `--output` | `-o` | `table` | Output format: `table` or `json` |
 | `--context` | | (current context) | Kubernetes context to use |
 | `--no-color` | | `false` | Disable colored output |
 | `--top-images` | | `25` | Number of top images to show |
 | `--version` | | | Show version information |
 
-## Example Output
+### Example output
 
 ```
 Analyzing images in namespace: All
 
-Found 45 unique images from 12 nodes (query time: 1.2s)
-Completed analyzing 45 images (time: 1.5s)
+✓ Found 312 unique images from 12 nodes (query time: 1.2s)
+✓ Completed analyzing 312 images (time: 150ms)
 
 Performance Summary
 ==================
-Node Query Time     1.2s
-Image Analysis Time 1.5s
-Total Time         1.5s
-Images Processed   45
++---------------------+-------+
+| Metric              | Value |
++---------------------+-------+
+| Node Query Time     | 1.2s  |
+| Image Analysis Time | 150ms |
+| Total Time          | 1.4s  |
+| Images Processed    | 312   |
++---------------------+-------+
 
 Image Analysis Summary
 =====================
-Total Images    45
-Total Size      2.5 GB
++---------------+--------+
+| Metric        | Value  |
++---------------+--------+
+| Total Images  | 312    |
+| Unique Images | 289    |
+| Total Size    | 45 GB  |
++---------------+--------+
 
 Image Size Distribution
 =======================
-  100MB-200MB : ████████████████████████████████████████ (15 images, 33%)
-  200MB-300MB : ████████████████████████████ (12 images, 27%)
-  300MB-400MB : ████████████████ (8 images, 18%)
-  400MB-500MB : ████████ (5 images, 11%)
-  500MB-600MB : ████ (3 images, 7%)
-  600MB-700MB : ██ (2 images, 4%)
+   0B-100MB : ████████████████████████████████████████ (95 images, 30%)
+ 100MB-200MB : ████████████████████████████ (82 images, 26%)
+ 200MB-300MB : ████████████████ (52 images, 17%)
+ 300MB-500MB : ████████ (38 images, 12%)
+ 500MB-  1GB : ████ (28 images, 9%)
+   1GB-  2GB : ██ (17 images, 5%)
 
 Top 25 Images by Size
 =====================
-Image                           Size
-----                            ----
-nginx:1.21                      133.0 MB
-redis:6.2                       110.0 MB
-postgres:13                     232.0 MB
++------------------------------------------+---------+
+| Image                                    | Size    |
++------------------------------------------+---------+
+| gcr.io/ml-platform/training-gpu:v2.1     | 1.8 GB  |
+| docker.io/nvidia/cuda:12.0-devel         | 1.5 GB  |
+| quay.io/prometheus/prometheus:v2.47       | 232 MB  |
+| docker.io/library/postgres:15            | 210 MB  |
+| docker.io/library/nginx:1.25             | 133 MB  |
+| ...                                      | ...     |
++------------------------------------------+---------+
 ```
 
-## How It Works
+### JSON output
+
+```bash
+kubectl analyze-images -o json | jq '.summary'
+```
+
+```json
+{
+  "totalImages": 312,
+  "totalSize": 48318382080,
+  "uniqueSize": 44891258880
+}
+```
+
+## How it works
 
 The plugin operates in two modes:
 
-1. **All Images Mode** (default): When no namespace or label selector is specified, it queries all nodes in the cluster to get image sizes from `node.Status.Images`. This provides a complete view of all images across the cluster.
+1. **All Images Mode** (default): When no namespace or label selector is specified, it queries all nodes in the cluster to get image sizes from `node.status.images`. This provides a complete view of all images cached across the cluster.
 
 2. **Filtered Mode**: When a namespace or label selector is specified, it first queries pods to identify which images are in use, then cross-references with node status data to get the sizes.
 
 Key design choices:
 
-- Uses Kubernetes pagination for large clusters
-- Read-only: only needs GET access to pods and nodes
+- Uses Kubernetes API pagination for large clusters (1000 items per page)
+- Read-only: only needs GET/LIST access to pods and nodes
 - No registry credentials required -- all data comes from node status
+- Progress spinners on stderr keep stdout clean for piping
 
 ## Requirements
 
-- Kubernetes cluster v1.29+
-- kubectl configured with cluster access
+- Kubernetes cluster with kubectl access configured
 - RBAC: read access to pods and nodes (list, get)
 
 ## Development
 
-### Prerequisites
-
-- Go 1.23+
-- golangci-lint
-
-### Build and Test
-
 ```bash
-# Build the plugin
-make build
-
-# Run tests
-make test
-
-# Run linter
-make lint
-
-# Run all checks (test + lint)
-make check
-
-# Build a snapshot release locally
-make snapshot
+make build          # Build (runs lint + test first)
+make test           # Run tests
+make lint           # Run golangci-lint
+make check          # Run tests and linter
+make test-coverage  # Run tests with coverage report
+make snapshot       # Build snapshot release locally (goreleaser)
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.
-
-## Releasing (for maintainers)
+## Releasing
 
 ```bash
-# 1. Ensure all tests pass
+# 1. Ensure all checks pass
 make check
 
 # 2. Tag the release
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+git tag -a v1.1.0 -m "Release v1.1.0"
+git push origin v1.1.0
 
 # 3. GoReleaser builds and publishes via GitHub Actions
 #    See .goreleaser.yaml for build configuration
 
 # 4. Update krew manifest sha256 hashes from release checksums.txt
 #    See plugins/analyze-images.yaml
-
-# 5. Test local krew install
-kubectl krew install --manifest=plugins/analyze-images.yaml
-
-# 6. Submit PR to krew-index repository
 ```
 
 ## License
