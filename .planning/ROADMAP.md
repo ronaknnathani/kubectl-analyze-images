@@ -85,7 +85,11 @@ Plans:
 
 ### Phase 4: Build & Release Automation
 **Goal:** Automate multi-platform builds and establish professional CI/CD pipeline.
-**Plans:** 2
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md -- GoReleaser config, golangci-lint config, and Makefile updates
+- [ ] 04-02-PLAN.md -- GitHub Actions CI and Release workflows
 
 **Scope:**
 - Create `.goreleaser.yaml` with multi-platform configuration (linux/darwin/windows, amd64/arm64)
