@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ronaknnathani/kubectl-analyze-images/pkg/kubernetes"
-	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/kubernetes"
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 )
 
 // createTestPod creates a test pod with the given name, namespace, and images

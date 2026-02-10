@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ronaknnathani/kubectl-analyze-images/pkg/plugin"
 	"github.com/spf13/cobra"
+
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/plugin"
 )
 
 var (

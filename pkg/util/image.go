@@ -5,7 +5,7 @@ import (
 )
 
 // ExtractRegistryAndTag extracts registry and tag from image name
-func ExtractRegistryAndTag(imageName string) (registry string, tag string) {
+func ExtractRegistryAndTag(imageName string) (registry, tag string) {
 	parts := strings.Split(imageName, "/")
 	registry = "docker.io"
 	tag = "latest"

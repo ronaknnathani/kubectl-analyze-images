@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+
 	"github.com/ronaknnathani/kubectl-analyze-images/internal/cluster"
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/util"

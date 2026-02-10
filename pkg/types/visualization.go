@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/util"
 )
 

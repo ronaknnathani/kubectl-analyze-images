@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/ronaknnathani/kubectl-analyze-images/pkg/kubernetes"
-	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/pager"
+
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/kubernetes"
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 )
 
 // Client represents a Kubernetes cluster client

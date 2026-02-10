@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/olekukonko/tablewriter"
+
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/util"
 )

@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 )
 
 func TestJSONPrinter_Print(t *testing.T) {
