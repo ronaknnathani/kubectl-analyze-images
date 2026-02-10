@@ -5,8 +5,8 @@ COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
-# Build the plugin with version info
-build: deps
+# Build the plugin with version info (runs lint and test first)
+build: lint test deps
 	go build -ldflags "$(LDFLAGS)" -o kubectl-analyze-images ./cmd/kubectl-analyze-images
 
 # Clean build artifacts
@@ -58,7 +58,7 @@ run-mock:
 # Help
 help:
 	@echo "Available targets:"
-	@echo "  build          - Build the plugin with version info"
+	@echo "  build          - Build the plugin (runs lint + test first)"
 	@echo "  clean          - Clean build artifacts"
 	@echo "  test           - Run tests"
 	@echo "  test-coverage  - Run tests with coverage report"

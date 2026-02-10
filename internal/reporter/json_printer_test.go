@@ -119,8 +119,8 @@ func TestJSONPrinter_Print(t *testing.T) {
 			require.True(t, ok, "result should have 'images' key")
 			if tt.wantImagesNotNull {
 				require.NotNil(t, images, "images should not be nil")
-				imagesArray, ok := images.([]interface{})
-				require.True(t, ok, "images should be an array")
+				imagesArray, isArray := images.([]interface{})
+				require.True(t, isArray, "images should be an array")
 				assert.Equal(t, tt.wantImagesCount, len(imagesArray), "images array should have correct length")
 			}
 
@@ -155,11 +155,9 @@ func TestJSONPrinter_Print(t *testing.T) {
 
 				_, hasImagesProcessed := perfMap["ImagesProcessed"]
 				assert.True(t, hasImagesProcessed, "performance should have 'ImagesProcessed' field")
-			} else {
+			} else if hasPerformance {
 				// When performance is nil, it should be omitted or null
-				if hasPerformance {
-					assert.Nil(t, performance, "performance should be nil when not provided")
-				}
+				assert.Nil(t, performance, "performance should be nil when not provided")
 			}
 		})
 	}

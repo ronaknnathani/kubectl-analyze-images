@@ -183,11 +183,12 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		// Lower bins (smaller sizes) = green, middle = yellow, higher bins (larger sizes) = red
 		if config.ShowColors {
 			binPosition := float64(i) / float64(len(hd.Bins)-1) * 100 // 0-100% based on bin position
-			if binPosition < 33 {
+			switch {
+			case binPosition < 33:
 				bar = greenBar(barChars)
-			} else if binPosition < 67 {
+			case binPosition < 67:
 				bar = yellowBar(barChars)
-			} else {
+			default:
 				bar = redBar(barChars)
 			}
 		} else {

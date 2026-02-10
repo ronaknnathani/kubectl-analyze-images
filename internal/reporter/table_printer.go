@@ -36,15 +36,15 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 		performanceTable := tablewriter.NewWriter(w)
 		performanceTable.Header("Metric", "Value")
 		if analysis.Performance.PodQueryTime > 0 {
-			performanceTable.Append("Pod Query Time", analysis.Performance.PodQueryTime.String())
+			_ = performanceTable.Append("Pod Query Time", analysis.Performance.PodQueryTime.String())
 		}
 		if analysis.Performance.NodeQueryTime > 0 {
-			performanceTable.Append("Node Query Time", analysis.Performance.NodeQueryTime.String())
+			_ = performanceTable.Append("Node Query Time", analysis.Performance.NodeQueryTime.String())
 		}
-		performanceTable.Append("Image Analysis Time", analysis.Performance.ImageAnalysisTime.String())
-		performanceTable.Append("Total Time", analysis.Performance.TotalTime.String())
-		performanceTable.Append("Images Processed", strconv.Itoa(analysis.Performance.ImagesProcessed))
-		performanceTable.Render()
+		_ = performanceTable.Append("Image Analysis Time", analysis.Performance.ImageAnalysisTime.String())
+		_ = performanceTable.Append("Total Time", analysis.Performance.TotalTime.String())
+		_ = performanceTable.Append("Images Processed", strconv.Itoa(analysis.Performance.ImagesProcessed))
+		_ = performanceTable.Render()
 		fmt.Fprintln(w)
 	}
 
@@ -54,10 +54,10 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 
 	summaryTable := tablewriter.NewWriter(w)
 	summaryTable.Header("Metric", "Value")
-	summaryTable.Append("Total Images", strconv.Itoa(len(analysis.Images)))
-	summaryTable.Append("Unique Images", strconv.Itoa(len(analysis.GetUniqueImages())))
-	summaryTable.Append("Total Size", util.FormatBytes(analysis.TotalSize))
-	summaryTable.Render()
+	_ = summaryTable.Append("Total Images", strconv.Itoa(len(analysis.Images)))
+	_ = summaryTable.Append("Unique Images", strconv.Itoa(len(analysis.GetUniqueImages())))
+	_ = summaryTable.Append("Total Size", util.FormatBytes(analysis.TotalSize))
+	_ = summaryTable.Render()
 	fmt.Fprintln(w)
 
 	// Image Size Distribution Histogram (if requested and we have images)
@@ -90,9 +90,9 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 			if img.Inaccessible {
 				size = "INACCESSIBLE"
 			}
-			imageTable.Append(img.Name, size)
+			_ = imageTable.Append(img.Name, size)
 		}
-		imageTable.Render()
+		_ = imageTable.Render()
 		fmt.Fprintln(w)
 	}
 

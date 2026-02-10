@@ -162,7 +162,7 @@ func TestClient_GetImageSizesFromNodes(t *testing.T) {
 					"redis:6.2":  50000000,
 				}),
 				createTestNode("node2", map[string]int64{
-					"nginx:1.21": 110000000, // Different size (last write wins)
+					"nginx:1.21":  110000000, // Different size (last write wins)
 					"postgres:13": 200000000,
 				}),
 			},
@@ -219,10 +219,10 @@ func TestClient_GetUniqueImages(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name          string
-		pods          []*corev1.Pod
-		namespace     string
-		expectedCount int
+		name           string
+		pods           []*corev1.Pod
+		namespace      string
+		expectedCount  int
 		expectedImages []string
 	}{
 		{
@@ -231,15 +231,15 @@ func TestClient_GetUniqueImages(t *testing.T) {
 				createTestPod("pod1", "default", "nginx:1.21", "redis:6.2"),
 				createTestPod("pod2", "default", "nginx:1.21", "postgres:13"),
 			},
-			namespace:     "default",
-			expectedCount: 3,
+			namespace:      "default",
+			expectedCount:  3,
 			expectedImages: []string{"nginx:1.21", "redis:6.2", "postgres:13"},
 		},
 		{
-			name:          "empty pod list",
-			pods:          []*corev1.Pod{},
-			namespace:     "default",
-			expectedCount: 0,
+			name:           "empty pod list",
+			pods:           []*corev1.Pod{},
+			namespace:      "default",
+			expectedCount:  0,
 			expectedImages: []string{},
 		},
 	}

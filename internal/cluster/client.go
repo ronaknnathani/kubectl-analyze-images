@@ -37,7 +37,7 @@ func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) 
 	} else {
 		s.Suffix = fmt.Sprintf(" Querying pods from cluster (namespace: %s)...", namespace)
 	}
-	s.Color("cyan")
+	_ = s.Color("cyan")
 	s.Start()
 	defer s.Stop()
 
@@ -104,7 +104,7 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 	// Create and start spinner
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
 	s.Suffix = " Querying image sizes from nodes..."
-	s.Color("cyan")
+	_ = s.Color("cyan")
 	s.Start()
 	defer s.Stop()
 
@@ -134,7 +134,7 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 		totalNodes++
 
 		for _, image := range node.Status.Images {
-			if image.Names != nil && len(image.Names) > 0 {
+			if len(image.Names) > 0 {
 				// Select the best canonical name
 				imageName := selectBestImageName(image.Names)
 				imageSizes[imageName] = image.SizeBytes

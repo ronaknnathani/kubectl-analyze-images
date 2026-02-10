@@ -63,7 +63,7 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 
 	// Create spinner for image analysis
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
-	s.Color("cyan")
+	_ = s.Color("cyan")
 
 	// Determine which images to analyze
 	var imagesToAnalyze map[string]bool
