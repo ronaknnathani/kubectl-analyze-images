@@ -80,7 +80,7 @@ func (ia *ImageAnalysis) GenerateImageSizeHistogram(config *HistogramConfig) *Hi
 	// Calculate standard deviation
 	var variance float64
 	for _, size := range sizes {
-		variance += math.Pow(size-mean, 2)
+		variance += (size - mean) * (size - mean)
 	}
 	stdDev := math.Sqrt(variance / float64(len(sizes)))
 
@@ -200,7 +200,7 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		countLabel := fmt.Sprintf("(%d images, %.0f%%)", bin.Count, percentage)
 
 		// Print the row
-		result.WriteString(fmt.Sprintf("  %s : %-*s %s\n", rangeLabel, barMaxWidth, bar, countLabel))
+		fmt.Fprintf(&result, "  %s : %-*s %s\n", rangeLabel, barMaxWidth, bar, countLabel)
 	}
 
 	// Statistics in a compact format
@@ -209,9 +209,9 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		result.WriteString("Image Size Summary\n")
 		result.WriteString("==================\n")
 
-		result.WriteString(fmt.Sprintf("Total Images: %d\n", hd.Total))
-		result.WriteString(fmt.Sprintf("Size Range: %s - %s\n", util.FormatBytes(int64(hd.MinValue)), util.FormatBytes(int64(hd.MaxValue))))
-		result.WriteString(fmt.Sprintf("Mean Size: %s\n", util.FormatBytes(int64(hd.Mean))))
+		fmt.Fprintf(&result, "Total Images: %d\n", hd.Total)
+		fmt.Fprintf(&result, "Size Range: %s - %s\n", util.FormatBytes(int64(hd.MinValue)), util.FormatBytes(int64(hd.MaxValue)))
+		fmt.Fprintf(&result, "Mean Size: %s\n", util.FormatBytes(int64(hd.Mean)))
 
 		// Add percentile information similar to kubectl-node_resource
 		result.WriteString("\nSize Percentiles\n")
@@ -244,11 +244,11 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 			p10 := actualSizes[int(float64(len(actualSizes))*0.1)]
 			p0 := actualSizes[0]
 
-			result.WriteString(fmt.Sprintf("  - P0 (Min)      : %s\n", util.FormatBytes(p0)))
-			result.WriteString(fmt.Sprintf("  - P10           : %s\n", util.FormatBytes(p10)))
-			result.WriteString(fmt.Sprintf("  - P50 (Median)  : %s\n", util.FormatBytes(p50)))
-			result.WriteString(fmt.Sprintf("  - P90           : %s\n", util.FormatBytes(p90)))
-			result.WriteString(fmt.Sprintf("  - P100 (Max)    : %s\n", util.FormatBytes(p100)))
+			fmt.Fprintf(&result, "  - P0 (Min)      : %s\n", util.FormatBytes(p0))
+			fmt.Fprintf(&result, "  - P10           : %s\n", util.FormatBytes(p10))
+			fmt.Fprintf(&result, "  - P50 (Median)  : %s\n", util.FormatBytes(p50))
+			fmt.Fprintf(&result, "  - P90           : %s\n", util.FormatBytes(p90))
+			fmt.Fprintf(&result, "  - P100 (Max)    : %s\n", util.FormatBytes(p100))
 		}
 	}
 

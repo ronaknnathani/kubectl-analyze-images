@@ -56,15 +56,15 @@ func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) 
 	}
 
 	// Use pager to efficiently list all pods
-	pager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+	p := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return c.k8sClient.ListPods(ctx, namespace, opts)
 	})
 
 	// Set page size for efficient pagination
-	pager.PageSize = 1000
+	p.PageSize = 1000
 
 	// List all pods using pager
-	err := pager.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
+	err := p.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
 		pod := obj.(*corev1.Pod)
 		allPods = append(allPods, types.FromK8sPod(pod))
 		totalPods = len(allPods)
@@ -117,12 +117,12 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 	}
 
 	// Use pager to efficiently list all nodes
-	pager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+	p := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return c.k8sClient.ListNodes(ctx, opts)
 	})
 
 	// Set page size for efficient pagination
-	pager.PageSize = 1000
+	p.PageSize = 1000
 
 	// Extract image sizes from node status
 	imageSizes := make(map[string]int64)
@@ -130,7 +130,7 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 	var totalNodes int
 
 	// List all nodes using pager
-	err := pager.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
+	err := p.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
 		node := obj.(*corev1.Node)
 		totalNodes++
 
@@ -238,7 +238,7 @@ func containsSHA(name string) bool {
 // isHexString checks if a string contains only hexadecimal characters
 func isHexString(s string) bool {
 	for _, r := range s {
-		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') && (r < 'A' || r > 'F') {
 			return false
 		}
 	}
