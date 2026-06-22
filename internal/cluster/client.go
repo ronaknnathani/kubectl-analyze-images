@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -20,25 +21,42 @@ import (
 // Client represents a Kubernetes cluster client
 type Client struct {
 	k8sClient kubernetes.Interface
+	errOut    io.Writer
 }
 
 // NewClient creates a new Kubernetes client
-func NewClient(k8sClient kubernetes.Interface) *Client {
+func NewClient(k8sClient kubernetes.Interface, errOut ...io.Writer) *Client {
+	w := io.Writer(os.Stderr)
+	if len(errOut) > 0 && errOut[0] != nil {
+		w = errOut[0]
+	}
 	return &Client{
 		k8sClient: k8sClient,
+		errOut:    w,
 	}
+}
+
+// ImageInventory contains image size and node-local availability from node status.
+type ImageInventory struct {
+	Sizes          map[string]int64
+	CachedOnNodes  map[string]int
+	DisplayNames   map[string]bool
+	NodesScanned   int
+	ImagesReported int
 }
 
 // ListPods lists pods with optional filters and performance metrics using pager
 func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) ([]types.Pod, *types.PerformanceMetrics, error) {
 	// Create and start spinner
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(c.errOut))
 	if namespace == "" {
 		s.Suffix = " Querying pods from cluster (namespace: All)..."
 	} else {
 		s.Suffix = fmt.Sprintf(" Querying pods from cluster (namespace: %s)...", namespace)
 	}
-	_ = s.Color("cyan")
+	if err := s.Color("cyan"); err != nil {
+		return nil, nil, fmt.Errorf("failed to color pod query spinner: %w", err)
+	}
 	s.Start()
 	defer s.Stop()
 
@@ -88,9 +106,13 @@ func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) 
 
 	// Show success message with pod count
 	if namespace == "" {
-		fmt.Fprintf(os.Stderr, "✓ Found %d pods across all namespaces (query time: %v)\n", totalPods, podQueryTime)
+		if _, err := fmt.Fprintf(c.errOut, "✓ Found %d pods across all namespaces (query time: %v)\n", totalPods, podQueryTime); err != nil {
+			return nil, nil, fmt.Errorf("failed to write pod query result: %w", err)
+		}
 	} else {
-		fmt.Fprintf(os.Stderr, "✓ Found %d pods in namespace %s (query time: %v)\n", totalPods, namespace, podQueryTime)
+		if _, err := fmt.Fprintf(c.errOut, "✓ Found %d pods in namespace %s (query time: %v)\n", totalPods, namespace, podQueryTime); err != nil {
+			return nil, nil, fmt.Errorf("failed to write pod query result: %w", err)
+		}
 	}
 
 	metrics := &types.PerformanceMetrics{
@@ -101,11 +123,13 @@ func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) 
 }
 
 // GetImageSizesFromNodes gets image sizes from node status
-func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, *types.PerformanceMetrics, error) {
+func (c *Client) GetImageSizesFromNodes(ctx context.Context) (*ImageInventory, *types.PerformanceMetrics, error) {
 	// Create and start spinner
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(c.errOut))
 	s.Suffix = " Querying image sizes from nodes..."
-	_ = s.Color("cyan")
+	if err := s.Color("cyan"); err != nil {
+		return nil, nil, fmt.Errorf("failed to color node query spinner: %w", err)
+	}
 	s.Start()
 	defer s.Stop()
 
@@ -125,7 +149,11 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 	p.PageSize = 1000
 
 	// Extract image sizes from node status
-	imageSizes := make(map[string]int64)
+	inventory := &ImageInventory{
+		Sizes:         make(map[string]int64),
+		CachedOnNodes: make(map[string]int),
+		DisplayNames:  make(map[string]bool),
+	}
 	var totalImages int
 	var totalNodes int
 
@@ -135,12 +163,22 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 		totalNodes++
 
 		for _, image := range node.Status.Images {
-			if len(image.Names) > 0 {
-				// Select the best canonical name
-				imageName := selectBestImageName(image.Names)
-				imageSizes[imageName] = image.SizeBytes
-				totalImages++
+			if len(image.Names) == 0 {
+				continue
 			}
+
+			imageName := selectBestImageName(image.Names)
+			inventory.DisplayNames[imageName] = true
+			seenNames := make(map[string]struct{}, len(image.Names))
+			for _, name := range image.Names {
+				if _, seen := seenNames[name]; seen {
+					continue
+				}
+				seenNames[name] = struct{}{}
+				inventory.Sizes[name] = image.SizeBytes
+				inventory.CachedOnNodes[name]++
+			}
+			totalImages++
 		}
 
 		// Update spinner with progress every 10 nodes
@@ -159,14 +197,18 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (map[string]int64, 
 	nodeQueryTime := time.Since(startTime)
 	s.Stop()
 
-	fmt.Fprintf(os.Stderr, "✓ Found %d unique images from %d nodes (query time: %v)\n",
-		len(imageSizes), totalNodes, nodeQueryTime)
+	inventory.NodesScanned = totalNodes
+	inventory.ImagesReported = totalImages
+	if _, err := fmt.Fprintf(c.errOut, "✓ Found %d unique images from %d nodes (query time: %v)\n",
+		len(inventory.DisplayNames), totalNodes, nodeQueryTime); err != nil {
+		return nil, nil, fmt.Errorf("failed to write node query result: %w", err)
+	}
 
 	metrics := &types.PerformanceMetrics{
 		NodeQueryTime: nodeQueryTime,
 	}
 
-	return imageSizes, metrics, nil
+	return inventory, metrics, nil
 }
 
 // namespaceDisplay returns a display name for the namespace
@@ -178,12 +220,12 @@ func namespaceDisplay(namespace string) string {
 }
 
 // GetUniqueImages extracts unique images from pods
-func (c *Client) GetUniqueImages(pods []types.Pod) map[string]bool {
-	uniqueImages := make(map[string]bool)
+func (c *Client) GetUniqueImages(pods []types.Pod) map[string]struct{} {
+	uniqueImages := make(map[string]struct{})
 
 	for _, pod := range pods {
 		for _, image := range pod.Images {
-			uniqueImages[image] = true
+			uniqueImages[image] = struct{}{}
 		}
 	}
 

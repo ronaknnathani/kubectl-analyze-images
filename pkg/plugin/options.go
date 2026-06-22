@@ -24,6 +24,7 @@ type AnalyzeOptions struct {
 	TopImages     int
 	KubeContext   string
 	ShowHistogram bool
+	Wide          bool
 
 	// Injected dependencies
 	KubernetesClient kubernetes.Interface
@@ -85,21 +86,31 @@ func (o *AnalyzeOptions) Run(ctx context.Context) error {
 	config := types.DefaultAnalysisConfig()
 
 	// Create cluster client with injected kubernetes interface
-	clusterClient := cluster.NewClient(o.KubernetesClient)
+	clusterClient := cluster.NewClient(o.KubernetesClient, o.ErrOut)
 
 	// Create analyzer with injected cluster client
-	podAnalyzer := analyzer.NewPodAnalyzer(clusterClient, config)
+	podAnalyzer := analyzer.NewPodAnalyzer(clusterClient, config, o.ErrOut)
 
 	// Display analysis parameters
 	namespaceDisplay := o.Namespace
 	if namespaceDisplay == "" {
 		namespaceDisplay = "All"
 	}
-	fmt.Fprintf(o.Out, "Analyzing images in namespace: %s\n", namespaceDisplay)
-	if o.LabelSelector != "" {
-		fmt.Fprintf(o.Out, "Using label selector: %s\n", o.LabelSelector)
+	statusOut := o.Out
+	if o.OutputFormat == "json" {
+		statusOut = o.ErrOut
 	}
-	fmt.Fprintln(o.Out)
+	if _, err := fmt.Fprintf(statusOut, "Analyzing images in namespace: %s\n", namespaceDisplay); err != nil {
+		return fmt.Errorf("failed to write analysis parameters: %w", err)
+	}
+	if o.LabelSelector != "" {
+		if _, err := fmt.Fprintf(statusOut, "Using label selector: %s\n", o.LabelSelector); err != nil {
+			return fmt.Errorf("failed to write label selector: %w", err)
+		}
+	}
+	if _, err := fmt.Fprintln(statusOut); err != nil {
+		return fmt.Errorf("failed to write analysis parameter spacer: %w", err)
+	}
 
 	// Run analysis
 	analysis, err := podAnalyzer.AnalyzePods(ctx, o.Namespace, o.LabelSelector)
@@ -111,6 +122,7 @@ func (o *AnalyzeOptions) Run(ctx context.Context) error {
 	rep := reporter.NewReporter(o.OutputFormat)
 	rep.SetNoColor(o.NoColor)
 	rep.SetTopImages(o.TopImages)
+	rep.SetWide(o.Wide)
 	if err := rep.GenerateReportTo(o.Out, analysis); err != nil {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}

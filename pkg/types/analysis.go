@@ -18,13 +18,11 @@ func DefaultAnalysisConfig() *AnalysisConfig {
 
 // PerformanceMetrics holds timing and performance data
 type PerformanceMetrics struct {
-	PodQueryTime       time.Duration
-	NodeQueryTime      time.Duration
-	ImageAnalysisTime  time.Duration
-	TotalTime          time.Duration
-	ImagesProcessed    int
-	ImagesFailed       int
-	ImagesInaccessible int
-	CacheHits          int
-	CacheMisses        int
+	PodQueryTime       time.Duration `json:"podQueryTime"`
+	NodeQueryTime      time.Duration `json:"nodeQueryTime"`
+	ImageAnalysisTime  time.Duration `json:"imageAnalysisTime"`
+	TotalTime          time.Duration `json:"totalTime"`
+	ImagesProcessed    int           `json:"imagesProcessed"`
+	ImagesFailed       int           `json:"imagesFailed"`
+	ImagesInaccessible int           `json:"imagesInaccessible"`
 }

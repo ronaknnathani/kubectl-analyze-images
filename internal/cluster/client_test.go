@@ -197,20 +197,21 @@ func TestClient_GetImageSizesFromNodes(t *testing.T) {
 			clusterClient := NewClient(fakeK8s)
 
 			// Get image sizes
-			imageSizes, metrics, err := clusterClient.GetImageSizesFromNodes(ctx)
+			inventory, metrics, err := clusterClient.GetImageSizesFromNodes(ctx)
 
 			// Assert no error
 			require.NoError(t, err)
 			assert.NotNil(t, metrics)
 
 			// Assert image count
-			assert.Len(t, imageSizes, tt.expectedCount)
+			assert.Len(t, inventory.DisplayNames, tt.expectedCount)
 
 			// Assert image sizes match expected
 			for imgName, expectedSize := range tt.expectedSizes {
-				actualSize, exists := imageSizes[imgName]
+				actualSize, exists := inventory.Sizes[imgName]
 				assert.True(t, exists, "Image %s should exist", imgName)
 				assert.Equal(t, expectedSize, actualSize, "Size mismatch for image %s", imgName)
+				assert.Greater(t, inventory.CachedOnNodes[imgName], 0, "Image %s should have cached-on-nodes count", imgName)
 			}
 		})
 	}
@@ -269,7 +270,8 @@ func TestClient_GetUniqueImages(t *testing.T) {
 
 			// Assert expected images present
 			for _, img := range tt.expectedImages {
-				assert.True(t, uniqueImages[img], "Image %s should be present", img)
+				_, exists := uniqueImages[img]
+				assert.True(t, exists, "Image %s should be present", img)
 			}
 		})
 	}

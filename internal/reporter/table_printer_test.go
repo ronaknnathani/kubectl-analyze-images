@@ -143,7 +143,7 @@ func TestTablePrinter_Print(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			printer := NewTablePrinter(tt.showHistogram, tt.noColor, tt.topImages)
+			printer := NewTablePrinter(tt.showHistogram, tt.noColor, tt.topImages, true)
 
 			err := printer.Print(&buf, tt.analysis)
 			require.NoError(t, err, "Print should not return an error")
@@ -180,7 +180,7 @@ func TestTablePrinter_Print_PerformanceMetrics(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	printer := NewTablePrinter(false, true, 25)
+	printer := NewTablePrinter(false, true, 25, true)
 
 	err := printer.Print(&buf, analysis)
 	require.NoError(t, err)
@@ -215,7 +215,7 @@ func TestTablePrinter_Print_TopImagesLimit(t *testing.T) {
 
 	// Test with topImages = 3
 	var buf bytes.Buffer
-	printer := NewTablePrinter(false, true, 3)
+	printer := NewTablePrinter(false, true, 3, true)
 
 	err := printer.Print(&buf, analysis)
 	require.NoError(t, err)

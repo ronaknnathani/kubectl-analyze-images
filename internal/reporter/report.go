@@ -14,6 +14,7 @@ type Reporter struct {
 	showHistogram bool
 	noColor       bool
 	topImages     int
+	wide          bool
 }
 
 // NewReporter creates a new reporter
@@ -41,12 +42,17 @@ func (r *Reporter) SetTopImages(count int) {
 	r.topImages = count
 }
 
+// SetWide disables image name truncation in table output.
+func (r *Reporter) SetWide(wide bool) {
+	r.wide = wide
+}
+
 // GenerateReportTo generates a report to the specified writer
 func (r *Reporter) GenerateReportTo(w io.Writer, analysis *types.ImageAnalysis) error {
 	var printer types.Printer
 	switch r.outputFormat {
 	case "table":
-		printer = NewTablePrinter(r.showHistogram, r.noColor, r.topImages)
+		printer = NewTablePrinter(r.showHistogram, r.noColor, r.topImages, r.wide)
 	case "json":
 		printer = NewJSONPrinter()
 	default:

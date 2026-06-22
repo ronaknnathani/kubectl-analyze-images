@@ -1,12 +1,12 @@
-.PHONY: build clean test test-coverage install install-plugin deps run-mock lint snapshot check help
+.PHONY: build clean test test-coverage install install-plugin deps run lint snapshot check help
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
-# Build the plugin with version info (runs lint and test first)
-build: lint test deps
+# Build the plugin with version info
+build: deps test
 	go build -ldflags "$(LDFLAGS)" -o kubectl-analyze-images ./cmd/kubectl-analyze-images
 
 # Clean build artifacts
@@ -51,14 +51,14 @@ install-plugin: build
 deps:
 	go mod tidy
 
-# Run with mock data (for testing without cluster)
-run-mock:
-	go run cmd/kubectl-analyze-images/main.go analyze --namespace=default
+# Run against the current Kubernetes context
+run:
+	go run ./cmd/kubectl-analyze-images --namespace=default
 
 # Help
 help:
 	@echo "Available targets:"
-	@echo "  build          - Build the plugin (runs lint + test first)"
+	@echo "  build          - Build the plugin"
 	@echo "  clean          - Clean build artifacts"
 	@echo "  test           - Run tests"
 	@echo "  test-coverage  - Run tests with coverage report"
@@ -68,4 +68,5 @@ help:
 	@echo "  install        - Install to ~/.local/bin"
 	@echo "  install-plugin - Install as kubectl plugin"
 	@echo "  deps           - Download dependencies"
+	@echo "  run            - Run against the current Kubernetes context"
 	@echo "  help           - Show this help"

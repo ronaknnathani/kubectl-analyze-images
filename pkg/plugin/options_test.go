@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -168,24 +167,20 @@ func TestAnalyzeOptions_Run_JSONOutput(t *testing.T) {
 	err := o.Run(context.Background())
 	require.NoError(t, err)
 
-	// The output contains "Analyzing images..." header lines followed by JSON
-	// Find the JSON portion (starts with '{')
 	output := out.String()
-	jsonStart := strings.Index(output, "{")
-	require.True(t, jsonStart >= 0, "expected JSON output, got: %s", output)
 
-	var result map[string]interface{}
-	err = json.Unmarshal([]byte(output[jsonStart:]), &result)
+	var result struct {
+		Summary struct {
+			TotalImages int `json:"totalImages"`
+		} `json:"summary"`
+	}
+	err = json.Unmarshal([]byte(output), &result)
 	require.NoError(t, err, "failed to parse JSON output")
 
-	// Verify structure
-	summary, ok := result["summary"].(map[string]interface{})
-	require.True(t, ok, "expected summary object in JSON")
-	assert.Equal(t, float64(1), summary["totalImages"])
+	assert.Equal(t, 1, result.Summary.TotalImages)
 }
 
 func TestAnalyzeOptions_Run_AllNamespaces(t *testing.T) {
-	// No pods needed for all-namespaces mode -- analyzer uses node images directly
 	node := testNode("node1", map[string]int64{
 		"nginx:1.21":  100000000,
 		"redis:6.2":   50000000,

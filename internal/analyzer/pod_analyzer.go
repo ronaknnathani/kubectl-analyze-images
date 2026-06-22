@@ -3,7 +3,9 @@ package analyzer
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -17,13 +19,19 @@ import (
 type PodAnalyzer struct {
 	clusterClient *cluster.Client
 	config        *types.AnalysisConfig
+	errOut        io.Writer
 }
 
 // NewPodAnalyzer creates a new pod analyzer with custom configuration
-func NewPodAnalyzer(clusterClient *cluster.Client, config *types.AnalysisConfig) *PodAnalyzer {
+func NewPodAnalyzer(clusterClient *cluster.Client, config *types.AnalysisConfig, errOut ...io.Writer) *PodAnalyzer {
+	w := io.Writer(os.Stderr)
+	if len(errOut) > 0 && errOut[0] != nil {
+		w = errOut[0]
+	}
 	return &PodAnalyzer{
 		clusterClient: clusterClient,
 		config:        config,
+		errOut:        w,
 	}
 }
 
@@ -32,50 +40,52 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 	overallStart := time.Now()
 
 	var pods []types.Pod
-	var perfMetrics *types.PerformanceMetrics
-	var err error
+	var podMetrics *types.PerformanceMetrics
+	var inventory *cluster.ImageInventory
+	var nodeMetrics *types.PerformanceMetrics
+	var podErr, nodeErr error
 
-	// Only query pods if namespace or label selector is specified
-	if namespace != "" || labelSelector != "" {
-		pods, perfMetrics, err = pa.clusterClient.ListPods(ctx, namespace, labelSelector)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list pods: %w", err)
-		}
-	} else {
-		// No filters specified, use all images from nodes
-		perfMetrics = &types.PerformanceMetrics{}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		pods, podMetrics, podErr = pa.clusterClient.ListPods(ctx, namespace, labelSelector)
+	}()
+	go func() {
+		defer wg.Done()
+		inventory, nodeMetrics, nodeErr = pa.clusterClient.GetImageSizesFromNodes(ctx)
+	}()
+	wg.Wait()
+
+	if podErr != nil {
+		return nil, fmt.Errorf("failed to list pods: %w", podErr)
+	}
+	if nodeErr != nil {
+		return nil, fmt.Errorf("failed to get image sizes from nodes: %w", nodeErr)
 	}
 
-	// Get image sizes from node status
-	imageSizes, nodeMetrics, err := pa.clusterClient.GetImageSizesFromNodes(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image sizes from nodes: %w", err)
-	}
-
-	// Merge performance metrics
-	if perfMetrics == nil {
-		perfMetrics = nodeMetrics
-	} else {
-		perfMetrics.NodeQueryTime = nodeMetrics.NodeQueryTime
+	perfMetrics := &types.PerformanceMetrics{
+		PodQueryTime:  podMetrics.PodQueryTime,
+		NodeQueryTime: nodeMetrics.NodeQueryTime,
 	}
 
 	// Start timing image analysis
 	imageAnalysisStart := time.Now()
 
 	// Create spinner for image analysis
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(os.Stderr))
-	_ = s.Color("cyan")
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond, spinner.WithWriter(pa.errOut))
+	if err := s.Color("cyan"); err != nil {
+		return nil, fmt.Errorf("failed to color image analysis spinner: %w", err)
+	}
 
-	// Determine which images to analyze
-	var imagesToAnalyze map[string]bool
-	if len(pods) > 0 {
-		// Use images from pods if we queried pods
-		imagesToAnalyze = pa.clusterClient.GetUniqueImages(pods)
-	} else {
-		// Use all images from nodes if no pod filters
-		imagesToAnalyze = make(map[string]bool)
-		for imageName := range imageSizes {
-			imagesToAnalyze[imageName] = true
+	usage := collectImageUsage(pods)
+	imagesToAnalyze := make(map[string]struct{})
+	for imageName := range usage {
+		imagesToAnalyze[imageName] = struct{}{}
+	}
+	if namespace == "" && labelSelector == "" {
+		for imageName := range inventory.DisplayNames {
+			imagesToAnalyze[imageName] = struct{}{}
 		}
 	}
 
@@ -89,29 +99,26 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 	var processedCount int
 
 	for imageName := range imagesToAnalyze {
-		size, exists := imageSizes[imageName]
+		size, exists := inventory.Sizes[imageName]
+		imageUsage := usage[imageName]
+		registry, tag := util.ExtractRegistryAndTag(imageName)
+		image := types.Image{
+			Name:           imageName,
+			Registry:       registry,
+			Tag:            tag,
+			PodCount:       imageUsage.podCount(),
+			ContainerCount: imageUsage.ContainerCount,
+			NamespaceCount: imageUsage.namespaceCount(),
+			CachedOnNodes:  inventory.CachedOnNodes[imageName],
+		}
 		if !exists {
-			// Image not found in node status, mark as inaccessible
-			registry, tag := util.ExtractRegistryAndTag(imageName)
-			images = append(images, types.Image{
-				Name:         imageName,
-				Size:         0,
-				Registry:     registry,
-				Tag:          tag,
-				Inaccessible: true,
-			})
+			image.Inaccessible = true
+			perfMetrics.ImagesInaccessible++
 		} else {
-			// Image found, create entry with size
-			registry, tag := util.ExtractRegistryAndTag(imageName)
-			images = append(images, types.Image{
-				Name:         imageName,
-				Size:         size,
-				Registry:     registry,
-				Tag:          tag,
-				Inaccessible: false,
-			})
+			image.Size = size
 			totalSize += size
 		}
+		images = append(images, image)
 		processedCount++
 	}
 
@@ -119,7 +126,9 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 	imageAnalysisTime := time.Since(imageAnalysisStart)
 
 	// Show completion message
-	fmt.Fprintf(os.Stderr, "✓ Completed analyzing %d images (time: %v)\n", processedCount, imageAnalysisTime)
+	if _, err := fmt.Fprintf(pa.errOut, "✓ Completed analyzing %d images (time: %v)\n", processedCount, imageAnalysisTime); err != nil {
+		return nil, fmt.Errorf("failed to write image analysis result: %w", err)
+	}
 
 	// Update performance metrics
 	perfMetrics.ImageAnalysisTime = imageAnalysisTime
@@ -128,11 +137,53 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 
 	// Build analysis result
 	analysis := &types.ImageAnalysis{
-		Images:      images,
-		TotalSize:   totalSize,
-		UniqueSize:  totalSize, // No deduplication in this approach
-		Performance: perfMetrics,
+		Images:       images,
+		TotalSize:    totalSize,
+		UniqueSize:   totalSize, // No deduplication in this approach
+		PodsScanned:  len(pods),
+		NodesScanned: inventory.NodesScanned,
+		Performance:  perfMetrics,
+	}
+	for _, img := range images {
+		if img.PodCount > 0 {
+			analysis.ImagesInUse++
+		} else {
+			analysis.UnusedImages++
+		}
 	}
 
 	return analysis, nil
+}
+
+type imageUsage struct {
+	ContainerCount int
+	pods           map[string]struct{}
+	namespaces     map[string]struct{}
+}
+
+func collectImageUsage(pods []types.Pod) map[string]imageUsage {
+	usage := make(map[string]imageUsage)
+	for _, pod := range pods {
+		podKey := pod.Namespace + "/" + pod.Name
+		for _, imageName := range pod.Images {
+			stat := usage[imageName]
+			if stat.pods == nil {
+				stat.pods = make(map[string]struct{})
+				stat.namespaces = make(map[string]struct{})
+			}
+			stat.ContainerCount++
+			stat.pods[podKey] = struct{}{}
+			stat.namespaces[pod.Namespace] = struct{}{}
+			usage[imageName] = stat
+		}
+	}
+	return usage
+}
+
+func (iu imageUsage) podCount() int {
+	return len(iu.pods)
+}
+
+func (iu imageUsage) namespaceCount() int {
+	return len(iu.namespaces)
 }

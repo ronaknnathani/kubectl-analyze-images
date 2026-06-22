@@ -12,6 +12,22 @@ import (
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 )
 
+type jsonReport struct {
+	Performance *types.PerformanceMetrics `json:"performance,omitempty"`
+	Summary     jsonSummary               `json:"summary"`
+	Images      []types.Image             `json:"images"`
+}
+
+type jsonSummary struct {
+	PodsScanned  int   `json:"podsScanned"`
+	NodesScanned int   `json:"nodesScanned"`
+	TotalImages  int   `json:"totalImages"`
+	ImagesInUse  int   `json:"imagesInUse"`
+	UnusedImages int   `json:"unusedImages"`
+	TotalSize    int64 `json:"totalSizeBytes"`
+	UniqueSize   int64 `json:"uniqueSizeBytes"`
+}
+
 func TestJSONPrinter_Print(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -110,55 +126,24 @@ func TestJSONPrinter_Print(t *testing.T) {
 			err := printer.Print(&buf, tt.analysis)
 			require.NoError(t, err, "Print should not return an error")
 
-			// Unmarshal the JSON to verify structure
-			var result map[string]interface{}
+			var result jsonReport
 			err = json.Unmarshal(buf.Bytes(), &result)
 			require.NoError(t, err, "output should be valid JSON")
 
-			// Check images array
-			images, ok := result["images"]
-			require.True(t, ok, "result should have 'images' key")
 			if tt.wantImagesNotNull {
-				require.NotNil(t, images, "images should not be nil")
-				imagesArray, isArray := images.([]interface{})
-				require.True(t, isArray, "images should be an array")
-				assert.Equal(t, tt.wantImagesCount, len(imagesArray), "images array should have correct length")
+				require.NotNil(t, result.Images, "images should not be nil")
+				assert.Equal(t, tt.wantImagesCount, len(result.Images), "images array should have correct length")
 			}
 
-			// Check summary object
-			summary, ok := result["summary"]
-			require.True(t, ok, "result should have 'summary' key")
-			require.NotNil(t, summary, "summary should not be nil")
+			assert.Equal(t, tt.wantTotalImages, result.Summary.TotalImages, "totalImages should match")
+			assert.Equal(t, tt.wantTotalSize, result.Summary.TotalSize, "totalSize should match")
+			assert.Equal(t, tt.wantUniqueSize, result.Summary.UniqueSize, "uniqueSize should match")
 
-			summaryMap, ok := summary.(map[string]interface{})
-			require.True(t, ok, "summary should be an object")
-
-			totalImages, ok := summaryMap["totalImages"]
-			require.True(t, ok, "summary should have 'totalImages'")
-			assert.Equal(t, float64(tt.wantTotalImages), totalImages, "totalImages should match")
-
-			totalSize, ok := summaryMap["totalSize"]
-			require.True(t, ok, "summary should have 'totalSize'")
-			assert.Equal(t, float64(tt.wantTotalSize), totalSize, "totalSize should match")
-
-			uniqueSize, ok := summaryMap["uniqueSize"]
-			require.True(t, ok, "summary should have 'uniqueSize'")
-			assert.Equal(t, float64(tt.wantUniqueSize), uniqueSize, "uniqueSize should match")
-
-			// Check performance
-			performance, hasPerformance := result["performance"]
 			if tt.wantPerformance {
-				assert.True(t, hasPerformance, "result should have 'performance' key")
-				assert.NotNil(t, performance, "performance should not be nil")
-
-				perfMap, ok := performance.(map[string]interface{})
-				require.True(t, ok, "performance should be an object")
-
-				_, hasImagesProcessed := perfMap["ImagesProcessed"]
-				assert.True(t, hasImagesProcessed, "performance should have 'ImagesProcessed' field")
-			} else if hasPerformance {
-				// When performance is nil, it should be omitted or null
-				assert.Nil(t, performance, "performance should be nil when not provided")
+				require.NotNil(t, result.Performance, "performance should not be nil")
+				assert.Equal(t, tt.analysis.Performance.ImagesProcessed, result.Performance.ImagesProcessed)
+			} else {
+				assert.Nil(t, result.Performance, "performance should be nil when not provided")
 			}
 		})
 	}
@@ -180,21 +165,14 @@ func TestJSONPrinter_Print_InaccessibleImage(t *testing.T) {
 	err := printer.Print(&buf, analysis)
 	require.NoError(t, err)
 
-	// Verify the JSON is valid
-	var result map[string]interface{}
+	var result jsonReport
 	err = json.Unmarshal(buf.Bytes(), &result)
 	require.NoError(t, err)
 
-	// Check that the inaccessible image is included
-	images, ok := result["images"].([]interface{})
-	require.True(t, ok)
-	require.Len(t, images, 1)
-
-	image, ok := images[0].(map[string]interface{})
-	require.True(t, ok)
-	assert.Equal(t, "private/image:latest", image["Name"])
-	assert.Equal(t, true, image["Inaccessible"])
-	assert.Equal(t, float64(0), image["Size"])
+	require.Len(t, result.Images, 1)
+	assert.Equal(t, "private/image:latest", result.Images[0].Name)
+	assert.True(t, result.Images[0].Inaccessible)
+	assert.Equal(t, int64(0), result.Images[0].Size)
 }
 
 func TestJSONPrinter_Print_CompletePerformanceMetrics(t *testing.T) {
@@ -212,8 +190,6 @@ func TestJSONPrinter_Print_CompletePerformanceMetrics(t *testing.T) {
 			ImagesProcessed:    1,
 			ImagesFailed:       0,
 			ImagesInaccessible: 0,
-			CacheHits:          10,
-			CacheMisses:        5,
 		},
 	}
 
@@ -223,17 +199,12 @@ func TestJSONPrinter_Print_CompletePerformanceMetrics(t *testing.T) {
 	err := printer.Print(&buf, analysis)
 	require.NoError(t, err)
 
-	var result map[string]interface{}
+	var result jsonReport
 	err = json.Unmarshal(buf.Bytes(), &result)
 	require.NoError(t, err)
 
-	performance, ok := result["performance"].(map[string]interface{})
-	require.True(t, ok, "performance should be present")
-
-	// Verify all performance fields are present
-	assert.Equal(t, float64(1), performance["ImagesProcessed"])
-	assert.Equal(t, float64(0), performance["ImagesFailed"])
-	assert.Equal(t, float64(0), performance["ImagesInaccessible"])
-	assert.Equal(t, float64(10), performance["CacheHits"])
-	assert.Equal(t, float64(5), performance["CacheMisses"])
+	require.NotNil(t, result.Performance, "performance should be present")
+	assert.Equal(t, 1, result.Performance.ImagesProcessed)
+	assert.Equal(t, 0, result.Performance.ImagesFailed)
+	assert.Equal(t, 0, result.Performance.ImagesInaccessible)
 }

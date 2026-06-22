@@ -8,19 +8,27 @@ import (
 
 // Image represents a container image with its metadata
 type Image struct {
-	Name         string
-	Size         int64
-	Registry     string
-	Tag          string
-	Inaccessible bool // True if the image cannot be accessed
+	Name           string `json:"name"`
+	Size           int64  `json:"sizeBytes"`
+	Registry       string `json:"registry"`
+	Tag            string `json:"tag"`
+	PodCount       int    `json:"podCount"`
+	ContainerCount int    `json:"containerCount"`
+	NamespaceCount int    `json:"namespaceCount"`
+	CachedOnNodes  int    `json:"cachedOnNodes"`
+	Inaccessible   bool   `json:"inaccessible"`
 }
 
 // ImageAnalysis represents the analysis results for images
 type ImageAnalysis struct {
-	Images      []Image
-	TotalSize   int64
-	UniqueSize  int64 // Size after deduplication
-	Performance *PerformanceMetrics
+	Images       []Image             `json:"images"`
+	TotalSize    int64               `json:"totalSizeBytes"`
+	UniqueSize   int64               `json:"uniqueSizeBytes"`
+	PodsScanned  int                 `json:"podsScanned"`
+	NodesScanned int                 `json:"nodesScanned"`
+	ImagesInUse  int                 `json:"imagesInUse"`
+	UnusedImages int                 `json:"unusedImages"`
+	Performance  *PerformanceMetrics `json:"performance,omitempty"`
 }
 
 // GetUniqueImages returns a map of unique images by name
@@ -43,8 +51,14 @@ func (ia *ImageAnalysis) GetTopImagesBySize(n int) []Image {
 	copy(sorted, ia.Images)
 
 	// Sort by size (descending) using Go's sort package
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Size > sorted[j].Size
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].Size != sorted[j].Size {
+			return sorted[i].Size > sorted[j].Size
+		}
+		if sorted[i].PodCount != sorted[j].PodCount {
+			return sorted[i].PodCount > sorted[j].PodCount
+		}
+		return sorted[i].Name < sorted[j].Name
 	})
 
 	return sorted[:n]

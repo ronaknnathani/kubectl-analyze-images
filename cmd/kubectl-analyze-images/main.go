@@ -24,7 +24,9 @@ func main() {
 		Short: "Analyze container images from Kubernetes pods",
 		Long: `A kubectl plugin to analyze container images from pods in Kubernetes clusters.
 It extracts image sizes from node status and generates reports with performance metrics.`,
-		Version: fmt.Sprintf("%s (commit: %s, date: %s)", version, commit, date),
+		Version:       fmt.Sprintf("%s (commit: %s, date: %s)", version, commit, date),
+		Args:          cobra.NoArgs,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := o.Complete(); err != nil {
 				return err
@@ -43,6 +45,7 @@ It extracts image sizes from node status and generates reports with performance 
 	rootCmd.Flags().BoolVar(&o.NoColor, "no-color", false, "Disable colored output (default: false)")
 	rootCmd.Flags().IntVar(&o.TopImages, "top-images", 25, "Number of top images to show in the report (default: 25)")
 	rootCmd.Flags().StringVar(&o.KubeContext, "context", "", "Kubernetes context to use (default: current context)")
+	rootCmd.Flags().BoolVar(&o.Wide, "wide", false, "Show full image names without truncation")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

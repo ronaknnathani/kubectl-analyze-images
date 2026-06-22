@@ -22,9 +22,13 @@ func (jp *JSONPrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error {
 	report := struct {
 		Performance *types.PerformanceMetrics `json:"performance,omitempty"`
 		Summary     struct {
-			TotalImages int   `json:"totalImages"`
-			TotalSize   int64 `json:"totalSize"`
-			UniqueSize  int64 `json:"uniqueSize"`
+			PodsScanned  int   `json:"podsScanned"`
+			NodesScanned int   `json:"nodesScanned"`
+			TotalImages  int   `json:"totalImages"`
+			ImagesInUse  int   `json:"imagesInUse"`
+			UnusedImages int   `json:"unusedImages"`
+			TotalSize    int64 `json:"totalSizeBytes"`
+			UniqueSize   int64 `json:"uniqueSizeBytes"`
 		} `json:"summary"`
 		Images []types.Image `json:"images"`
 	}{
@@ -32,7 +36,11 @@ func (jp *JSONPrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error {
 		Images:      analysis.Images,
 	}
 
+	report.Summary.PodsScanned = analysis.PodsScanned
+	report.Summary.NodesScanned = analysis.NodesScanned
 	report.Summary.TotalImages = len(analysis.Images)
+	report.Summary.ImagesInUse = analysis.ImagesInUse
+	report.Summary.UnusedImages = analysis.UnusedImages
 	report.Summary.TotalSize = analysis.TotalSize
 	report.Summary.UniqueSize = analysis.UniqueSize
 

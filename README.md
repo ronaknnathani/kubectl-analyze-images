@@ -5,6 +5,8 @@ A kubectl plugin that analyzes container image sizes across Kubernetes clusters 
 ## Features
 
 - Analyze image sizes from node status (no external registry queries needed)
+- Show how many pods and containers use each image
+- Show how many nodes have each image cached locally
 - Histogram visualization of image size distribution
 - Filter by namespace and label selector
 - Table and JSON output formats
@@ -96,6 +98,9 @@ kubectl analyze-images --context=prod-cluster
 # Show top 50 images (default is 25)
 kubectl analyze-images --top-images=50
 
+# Show full image names without truncation
+kubectl analyze-images --wide
+
 # Disable colored output (useful for piping)
 kubectl analyze-images --no-color
 ```
@@ -110,6 +115,7 @@ kubectl analyze-images --no-color
 | `--context` | | (current context) | Kubernetes context to use |
 | `--no-color` | | `false` | Disable colored output |
 | `--top-images` | | `25` | Number of top images to show |
+| `--wide` | | `false` | Show full image names without truncation |
 | `--version` | | | Show version information |
 
 ### Example output
@@ -117,6 +123,7 @@ kubectl analyze-images --no-color
 ```
 Analyzing images in namespace: All
 
+✓ Found 560 pods across all namespaces (query time: 1.1s)
 ✓ Found 312 unique images from 12 nodes (query time: 1.2s)
 ✓ Completed analyzing 312 images (time: 150ms)
 
@@ -126,20 +133,25 @@ Performance Summary
 | Metric              | Value |
 +---------------------+-------+
 | Node Query Time     | 1.2s  |
+| Pod Query Time      | 1.1s  |
 | Image Analysis Time | 150ms |
-| Total Time          | 1.4s  |
+| Total Time          | 1.3s  |
 | Images Processed    | 312   |
 +---------------------+-------+
 
 Image Analysis Summary
 =====================
 +---------------+--------+
-| Metric        | Value  |
-+---------------+--------+
-| Total Images  | 312    |
-| Unique Images | 289    |
-| Total Size    | 45 GB  |
-+---------------+--------+
+| Metric                  | Value  |
++-------------------------+--------+
+| Pods Scanned            | 560    |
+| Nodes Scanned           | 12     |
+| Total Images            | 312    |
+| Images In Use           | 289    |
+| Images Not Used By Pods | 23     |
+| Unique Images           | 312    |
+| Total Unique Size       | 45 GB  |
++-------------------------+--------+
 
 Image Size Distribution
 =======================
@@ -150,18 +162,15 @@ Image Size Distribution
  500MB-  1GB : ████ (28 images, 9%)
    1GB-  2GB : ██ (17 images, 5%)
 
-Top 25 Images by Size
-=====================
-+------------------------------------------+---------+
-| Image                                    | Size    |
-+------------------------------------------+---------+
-| gcr.io/ml-platform/training-gpu:v2.1     | 1.8 GB  |
-| docker.io/nvidia/cuda:12.0-devel         | 1.5 GB  |
-| quay.io/prometheus/prometheus:v2.47       | 232 MB  |
-| docker.io/library/postgres:15            | 210 MB  |
-| docker.io/library/nginx:1.25             | 133 MB  |
-| ...                                      | ...     |
-+------------------------------------------+---------+
+Top 25 Images by Size and Usage
+==============================
++--------------------------------------+-----+------------+------------+--------+-----------------+
+| Image                                | Pods| Containers | Namespaces | Size   | Cached On Nodes |
++--------------------------------------+-----+------------+------------+--------+-----------------+
+| gcr.io/ml-platform/training-gpu:v2.1 | 4   | 4          | 1          | 1.8 GB | 3               |
+| docker.io/nvidia/cuda:12.0-devel     | 0   | 0          | 0          | 1.5 GB | 2               |
+| quay.io/prometheus/prometheus:v2.47  | 3   | 3          | 1          | 232 MB | 12              |
++--------------------------------------+-----+------------+------------+--------+-----------------+
 ```
 
 ### JSON output
@@ -172,9 +181,13 @@ kubectl analyze-images -o json | jq '.summary'
 
 ```json
 {
+  "podsScanned": 560,
+  "nodesScanned": 12,
   "totalImages": 312,
-  "totalSize": 48318382080,
-  "uniqueSize": 44891258880
+  "imagesInUse": 289,
+  "unusedImages": 23,
+  "totalSizeBytes": 48318382080,
+  "uniqueSizeBytes": 44891258880
 }
 ```
 
@@ -182,9 +195,9 @@ kubectl analyze-images -o json | jq '.summary'
 
 The plugin operates in two modes:
 
-1. **All Images Mode** (default): When no namespace or label selector is specified, it queries all nodes in the cluster to get image sizes from `node.status.images`. This provides a complete view of all images cached across the cluster.
+1. **All Images Mode** (default): When no namespace or label selector is specified, it queries pods and nodes. Pod data provides usage counts, and node status provides image sizes plus how many nodes have each image cached locally.
 
-2. **Filtered Mode**: When a namespace or label selector is specified, it first queries pods to identify which images are in use, then cross-references with node status data to get the sizes.
+2. **Filtered Mode**: When a namespace or label selector is specified, it reports only images used by matching pods, then cross-references node status data to get sizes and cached-on-nodes counts.
 
 Key design choices:
 
@@ -192,6 +205,7 @@ Key design choices:
 - Read-only: only needs GET/LIST access to pods and nodes
 - No registry credentials required -- all data comes from node status
 - Progress spinners on stderr keep stdout clean for piping
+- JSON output writes only JSON to stdout; progress stays on stderr
 
 ## Requirements
 
@@ -201,7 +215,7 @@ Key design choices:
 ## Development
 
 ```bash
-make build          # Build (runs lint + test first)
+make build          # Build the plugin
 make test           # Run tests
 make lint           # Run golangci-lint
 make check          # Run tests and linter

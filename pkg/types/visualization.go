@@ -87,6 +87,9 @@ func (ia *ImageAnalysis) GenerateImageSizeHistogram(config *HistogramConfig) *Hi
 	// Create bins
 	bins := make([]HistogramBin, config.Bins)
 	binWidth := (maxVal - minVal) / float64(config.Bins)
+	if binWidth == 0 {
+		binWidth = 1
+	}
 
 	// Initialize bins
 	for i := 0; i < config.Bins; i++ {
@@ -149,7 +152,10 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 	// Note: Title is handled by the reporter, so we don't print it here
 
 	// Define bar width for horizontal bars
-	barMaxWidth := 40 // Maximum width for bars
+	barMaxWidth := config.Width
+	if barMaxWidth <= 0 {
+		barMaxWidth = 40
+	}
 
 	// Define color functions based on percentage
 	greenBar := color.New(color.FgGreen).SprintFunc()
@@ -170,7 +176,7 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		}
 
 		// Format the bin range label with color
-		rangeLabel := fmt.Sprintf("%6s-%6s", util.FormatBytesShort(int64(bin.Min)), util.FormatBytesShort(int64(bin.Max)))
+		rangeLabel := fmt.Sprintf("%12s - %-12s", util.FormatBytes(int64(bin.Min)), util.FormatBytes(int64(bin.Max)))
 		if config.ShowColors {
 			rangeLabel = cyanLabel(rangeLabel)
 		}
@@ -183,7 +189,10 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		// Color coding based on size ranges (bin position)
 		// Lower bins (smaller sizes) = green, middle = yellow, higher bins (larger sizes) = red
 		if config.ShowColors {
-			binPosition := float64(i) / float64(len(hd.Bins)-1) * 100 // 0-100% based on bin position
+			binPosition := 0.0
+			if len(hd.Bins) > 1 {
+				binPosition = float64(i) / float64(len(hd.Bins)-1) * 100
+			}
 			switch {
 			case binPosition < 33:
 				bar = greenBar(barChars)
@@ -218,17 +227,9 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		result.WriteString("================\n")
 
 		// Use actual image sizes for percentile calculation (more accurate)
-		actualSizes := make([]int64, 0, hd.Total)
-		for _, bin := range hd.Bins {
-			for _, itemName := range bin.Items {
-				// Find the actual image size for this item
-				for _, img := range analysis.Images {
-					if img.Name == itemName {
-						actualSizes = append(actualSizes, img.Size)
-						break
-					}
-				}
-			}
+		actualSizes := make([]int64, 0, len(analysis.Images))
+		for _, img := range analysis.Images {
+			actualSizes = append(actualSizes, img.Size)
 		}
 
 		if len(actualSizes) > 0 {
@@ -239,9 +240,9 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 
 			// Calculate percentiles
 			p100 := actualSizes[len(actualSizes)-1]
-			p90 := actualSizes[int(float64(len(actualSizes))*0.9)]
+			p90 := actualSizes[percentileIndex(len(actualSizes), 90)]
 			p50 := actualSizes[len(actualSizes)/2]
-			p10 := actualSizes[int(float64(len(actualSizes))*0.1)]
+			p10 := actualSizes[percentileIndex(len(actualSizes), 10)]
 			p0 := actualSizes[0]
 
 			fmt.Fprintf(&result, "  - P0 (Min)      : %s\n", util.FormatBytes(p0))
@@ -253,4 +254,18 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 	}
 
 	return result.String()
+}
+
+func percentileIndex(length, percentile int) int {
+	if length <= 1 {
+		return 0
+	}
+	index := int(float64(length-1) * float64(percentile) / 100)
+	if index < 0 {
+		return 0
+	}
+	if index >= length {
+		return length - 1
+	}
+	return index
 }
