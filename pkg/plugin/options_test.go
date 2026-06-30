@@ -92,12 +92,14 @@ func TestAnalyzeOptions_Validate(t *testing.T) {
 		opts        AnalyzeOptions
 		expectError string
 	}{
-		{name: "valid table format", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 25}},
-		{name: "valid json format", opts: AnalyzeOptions{OutputFormat: "json", TopImages: 10}},
-		{name: "invalid output format", opts: AnalyzeOptions{OutputFormat: "yaml", TopImages: 25}, expectError: "invalid output format"},
-		{name: "topImages zero", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 0}, expectError: "must be at least 1"},
-		{name: "topImages negative", opts: AnalyzeOptions{OutputFormat: "table", TopImages: -5}, expectError: "must be at least 1"},
-		{name: "topImages one is valid", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 1}},
+		{name: "valid table format", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 25, ImageNameParts: 1, SortBy: "size"}},
+		{name: "valid json format", opts: AnalyzeOptions{OutputFormat: "json", TopImages: 10, ImageNameParts: 1, SortBy: "pods"}},
+		{name: "invalid output format", opts: AnalyzeOptions{OutputFormat: "yaml", TopImages: 25, ImageNameParts: 1, SortBy: "size"}, expectError: "invalid output format"},
+		{name: "topImages zero", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 0, ImageNameParts: 1, SortBy: "size"}, expectError: "must be at least 1"},
+		{name: "topImages negative", opts: AnalyzeOptions{OutputFormat: "table", TopImages: -5, ImageNameParts: 1, SortBy: "size"}, expectError: "must be at least 1"},
+		{name: "imageNameParts zero", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 1, ImageNameParts: 0, SortBy: "size"}, expectError: "image-name-parts"},
+		{name: "invalid sort", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 1, ImageNameParts: 1, SortBy: "names"}, expectError: "invalid sort option"},
+		{name: "topImages one is valid", opts: AnalyzeOptions{OutputFormat: "table", TopImages: 1, ImageNameParts: 1, SortBy: "cached-on-nodes"}},
 	}
 
 	for _, tc := range tests {
@@ -171,13 +173,13 @@ func TestAnalyzeOptions_Run_JSONOutput(t *testing.T) {
 
 	var result struct {
 		Summary struct {
-			TotalImages int `json:"totalImages"`
+			ImagesAnalyzed int `json:"imagesAnalyzed"`
 		} `json:"summary"`
 	}
 	err = json.Unmarshal([]byte(output), &result)
 	require.NoError(t, err, "failed to parse JSON output")
 
-	assert.Equal(t, 1, result.Summary.TotalImages)
+	assert.Equal(t, 1, result.Summary.ImagesAnalyzed)
 }
 
 func TestAnalyzeOptions_Run_AllNamespaces(t *testing.T) {

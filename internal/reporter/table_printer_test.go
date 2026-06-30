@@ -44,7 +44,8 @@ func TestTablePrinter_Print(t *testing.T) {
 				"Image Analysis Summary",
 				"nginx:1.21",
 				"redis:6.2",
-				"Total Images",
+				"Images Analyzed",
+				"Sum Of Image Sizes",
 			},
 			wantNotContain: []string{},
 		},
@@ -61,7 +62,7 @@ func TestTablePrinter_Print(t *testing.T) {
 			topImages:     25,
 			wantContains: []string{
 				"Image Analysis Summary",
-				"Total Images",
+				"Images Analyzed",
 			},
 			wantNotContain: []string{
 				"Performance Summary",
@@ -143,7 +144,7 @@ func TestTablePrinter_Print(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			printer := NewTablePrinter(tt.showHistogram, tt.noColor, tt.topImages, true)
+			printer := NewTablePrinter(tt.showHistogram, tt.noColor, tt.topImages, false, 1, types.ImageSortBySize)
 
 			err := printer.Print(&buf, tt.analysis)
 			require.NoError(t, err, "Print should not return an error")
@@ -180,7 +181,7 @@ func TestTablePrinter_Print_PerformanceMetrics(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	printer := NewTablePrinter(false, true, 25, true)
+	printer := NewTablePrinter(false, true, 25, false, 1, types.ImageSortBySize)
 
 	err := printer.Print(&buf, analysis)
 	require.NoError(t, err)
@@ -204,6 +205,7 @@ func TestTablePrinter_Print_TopImagesLimit(t *testing.T) {
 			Registry: "docker.io",
 			Tag:      "latest",
 		}
+
 	}
 
 	analysis := &types.ImageAnalysis{
@@ -215,7 +217,7 @@ func TestTablePrinter_Print_TopImagesLimit(t *testing.T) {
 
 	// Test with topImages = 3
 	var buf bytes.Buffer
-	printer := NewTablePrinter(false, true, 3, true)
+	printer := NewTablePrinter(false, true, 3, false, 1, types.ImageSortBySize)
 
 	err := printer.Print(&buf, analysis)
 	require.NoError(t, err)
@@ -239,4 +241,44 @@ func TestTablePrinter_Print_TopImagesLimit(t *testing.T) {
 	}
 	// We expect to see exactly 3 images in the top images section
 	assert.Equal(t, 3, imageCount, "should display exactly 3 images")
+}
+
+func TestTablePrinter_DisplayImageName(t *testing.T) {
+	tests := []struct {
+		name      string
+		printer   *TablePrinter
+		imageName string
+		want      string
+	}{
+		{
+			name:      "full name by default",
+			printer:   NewTablePrinter(false, true, 25, false, 1, types.ImageSortBySize),
+			imageName: "registry.example.com/team/service:v1",
+			want:      "registry.example.com/team/service:v1",
+		},
+		{
+			name:      "truncate to last path part",
+			printer:   NewTablePrinter(false, true, 25, true, 1, types.ImageSortBySize),
+			imageName: "registry.example.com/team/service:v1",
+			want:      "service:v1",
+		},
+		{
+			name:      "truncate to last two path parts",
+			printer:   NewTablePrinter(false, true, 25, true, 2, types.ImageSortBySize),
+			imageName: "registry.example.com/team/service:v1",
+			want:      "team/service:v1",
+		},
+		{
+			name:      "requested parts exceed image parts",
+			printer:   NewTablePrinter(false, true, 25, true, 10, types.ImageSortBySize),
+			imageName: "team/service:v1",
+			want:      "team/service:v1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.printer.displayImageName(tt.imageName))
+		})
+	}
 }

@@ -103,13 +103,14 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 		imageUsage := usage[imageName]
 		registry, tag := util.ExtractRegistryAndTag(imageName)
 		image := types.Image{
-			Name:           imageName,
-			Registry:       registry,
-			Tag:            tag,
-			PodCount:       imageUsage.podCount(),
-			ContainerCount: imageUsage.ContainerCount,
-			NamespaceCount: imageUsage.namespaceCount(),
-			CachedOnNodes:  inventory.CachedOnNodes[imageName],
+			Name:               imageName,
+			Registry:           registry,
+			Tag:                tag,
+			PodCount:           imageUsage.podCount(),
+			ContainerCount:     imageUsage.ContainerCount,
+			InitContainerCount: imageUsage.InitContainerCount,
+			NamespaceCount:     imageUsage.namespaceCount(),
+			CachedOnNodes:      inventory.CachedOnNodes[imageName],
 		}
 		if !exists {
 			image.Inaccessible = true
@@ -156,28 +157,39 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 }
 
 type imageUsage struct {
-	ContainerCount int
-	pods           map[string]struct{}
-	namespaces     map[string]struct{}
+	ContainerCount     int
+	InitContainerCount int
+	pods               map[string]struct{}
+	namespaces         map[string]struct{}
 }
 
 func collectImageUsage(pods []types.Pod) map[string]imageUsage {
 	usage := make(map[string]imageUsage)
 	for _, pod := range pods {
 		podKey := pod.Namespace + "/" + pod.Name
-		for _, imageName := range pod.Images {
-			stat := usage[imageName]
-			if stat.pods == nil {
-				stat.pods = make(map[string]struct{})
-				stat.namespaces = make(map[string]struct{})
-			}
+		for _, imageName := range pod.ContainerImages {
+			stat := imageUsageForPod(usage, imageName, podKey, pod.Namespace)
 			stat.ContainerCount++
-			stat.pods[podKey] = struct{}{}
-			stat.namespaces[pod.Namespace] = struct{}{}
+			usage[imageName] = stat
+		}
+		for _, imageName := range pod.InitContainerImages {
+			stat := imageUsageForPod(usage, imageName, podKey, pod.Namespace)
+			stat.InitContainerCount++
 			usage[imageName] = stat
 		}
 	}
 	return usage
+}
+
+func imageUsageForPod(usage map[string]imageUsage, imageName, podKey, namespace string) imageUsage {
+	stat := usage[imageName]
+	if stat.pods == nil {
+		stat.pods = make(map[string]struct{})
+		stat.namespaces = make(map[string]struct{})
+	}
+	stat.pods[podKey] = struct{}{}
+	stat.namespaces[namespace] = struct{}{}
+	return stat
 }
 
 func (iu imageUsage) podCount() int {

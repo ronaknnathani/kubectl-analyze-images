@@ -14,19 +14,23 @@ import (
 
 // TablePrinter formats output as ASCII tables
 type TablePrinter struct {
-	showHistogram bool
-	noColor       bool
-	topImages     int
-	wide          bool
+	showHistogram      bool
+	noColor            bool
+	topImages          int
+	truncateImageNames bool
+	imageNameParts     int
+	sortBy             types.ImageSortBy
 }
 
 // NewTablePrinter creates a new table printer
-func NewTablePrinter(showHistogram, noColor bool, topImages int, wide bool) *TablePrinter {
+func NewTablePrinter(showHistogram, noColor bool, topImages int, truncateImageNames bool, imageNameParts int, sortBy types.ImageSortBy) *TablePrinter {
 	return &TablePrinter{
-		showHistogram: showHistogram,
-		noColor:       noColor,
-		topImages:     topImages,
-		wide:          wide,
+		showHistogram:      showHistogram,
+		noColor:            noColor,
+		topImages:          topImages,
+		truncateImageNames: truncateImageNames,
+		imageNameParts:     imageNameParts,
+		sortBy:             sortBy,
 	}
 }
 
@@ -75,11 +79,10 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 	if err := appendRows(summaryTable,
 		[]string{"Pods Scanned", strconv.Itoa(analysis.PodsScanned)},
 		[]string{"Nodes Scanned", strconv.Itoa(analysis.NodesScanned)},
-		[]string{"Total Images", strconv.Itoa(len(analysis.Images))},
+		[]string{"Images Analyzed", strconv.Itoa(len(analysis.Images))},
 		[]string{"Images In Use", strconv.Itoa(analysis.ImagesInUse)},
 		[]string{"Images Not Used By Pods", strconv.Itoa(analysis.UnusedImages)},
-		[]string{"Unique Images", strconv.Itoa(len(analysis.GetUniqueImages()))},
-		[]string{"Total Unique Size", util.FormatBytes(analysis.TotalSize)},
+		[]string{"Sum Of Image Sizes", util.FormatBytes(analysis.TotalSize)},
 	); err != nil {
 		return err
 	}
@@ -113,7 +116,7 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 		if _, err := fmt.Fprintln(w); err != nil {
 			return fmt.Errorf("failed to write image table spacer: %w", err)
 		}
-		if _, err := fmt.Fprintf(w, "Top %d Images by Size and Usage\n", tp.topImages); err != nil {
+		if _, err := fmt.Fprintf(w, "Top %d Images by %s\n", tp.topImages, sortDisplayName(tp.sortBy)); err != nil {
 			return fmt.Errorf("failed to write image table title: %w", err)
 		}
 		if _, err := fmt.Fprintln(w, "=============================="); err != nil {
@@ -121,9 +124,9 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 		}
 
 		imageTable := tablewriter.NewWriter(w)
-		imageTable.Header("Image", "Pods", "Containers", "Namespaces", "Size", "Cached On Nodes")
+		imageTable.Header("Image", "Pods", "Containers", "Init Containers", "Namespaces", "Size", "Cached On Nodes")
 
-		topImages := analysis.GetTopImagesBySize(tp.topImages)
+		topImages := analysis.GetTopImages(tp.topImages, tp.sortBy)
 		for _, img := range topImages {
 			size := util.FormatBytes(img.Size)
 			if img.Inaccessible {
@@ -133,6 +136,7 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 				tp.displayImageName(img.Name),
 				strconv.Itoa(img.PodCount),
 				strconv.Itoa(img.ContainerCount),
+				strconv.Itoa(img.InitContainerCount),
 				strconv.Itoa(img.NamespaceCount),
 				size,
 				strconv.Itoa(img.CachedOnNodes),
@@ -152,17 +156,25 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 }
 
 func (tp *TablePrinter) displayImageName(name string) string {
-	if tp.wide {
+	if !tp.truncateImageNames {
 		return name
 	}
-	const maxImageNameLength = 88
-	if len(name) <= maxImageNameLength {
+	parts := strings.Split(name, "/")
+	if tp.imageNameParts >= len(parts) {
 		return name
 	}
-	const ellipsis = "..."
-	front := (maxImageNameLength - len(ellipsis)) / 2
-	back := maxImageNameLength - len(ellipsis) - front
-	return name[:front] + ellipsis + name[len(name)-back:]
+	return strings.Join(parts[len(parts)-tp.imageNameParts:], "/")
+}
+
+func sortDisplayName(sortBy types.ImageSortBy) string {
+	switch sortBy {
+	case types.ImageSortByPods:
+		return "Pod Usage"
+	case types.ImageSortByCachedOnNodes:
+		return "Cached On Nodes"
+	default:
+		return "Size"
+	}
 }
 
 func writeLines(w io.Writer, lines ...string) error {

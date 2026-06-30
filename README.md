@@ -5,7 +5,7 @@ A kubectl plugin that analyzes container image sizes across Kubernetes clusters 
 ## Features
 
 - Analyze image sizes from node status (no external registry queries needed)
-- Show how many pods and containers use each image
+- Show how many pods, containers, and init containers use each image
 - Show how many nodes have each image cached locally
 - Histogram visualization of image size distribution
 - Filter by namespace and label selector
@@ -98,8 +98,14 @@ kubectl analyze-images --context=prod-cluster
 # Show top 50 images (default is 25)
 kubectl analyze-images --top-images=50
 
-# Show full image names without truncation
-kubectl analyze-images --wide
+# Truncate image names to the last path component
+kubectl analyze-images --truncate-image-names
+
+# Truncate image names to the last two slash-separated path components
+kubectl analyze-images --truncate-image-names --image-name-parts=2
+
+# Sort by pod usage instead of size
+kubectl analyze-images --sort-by=pods
 
 # Disable colored output (useful for piping)
 kubectl analyze-images --no-color
@@ -115,7 +121,9 @@ kubectl analyze-images --no-color
 | `--context` | | (current context) | Kubernetes context to use |
 | `--no-color` | | `false` | Disable colored output |
 | `--top-images` | | `25` | Number of top images to show |
-| `--wide` | | `false` | Show full image names without truncation |
+| `--truncate-image-names` | | `false` | Truncate image names in table output |
+| `--image-name-parts` | | `1` | Number of trailing slash-separated image path parts to keep when truncating |
+| `--sort-by` | | `size` | Sort image table by: `size`, `pods`, or `cached-on-nodes` |
 | `--version` | | | Show version information |
 
 ### Example output
@@ -146,11 +154,10 @@ Image Analysis Summary
 +-------------------------+--------+
 | Pods Scanned            | 560    |
 | Nodes Scanned           | 12     |
-| Total Images            | 312    |
+| Images Analyzed         | 312    |
 | Images In Use           | 289    |
 | Images Not Used By Pods | 23     |
-| Unique Images           | 312    |
-| Total Unique Size       | 45 GB  |
+| Sum Of Image Sizes      | 45 GB  |
 +-------------------------+--------+
 
 Image Size Distribution
@@ -162,15 +169,15 @@ Image Size Distribution
  500MB-  1GB : ████ (28 images, 9%)
    1GB-  2GB : ██ (17 images, 5%)
 
-Top 25 Images by Size and Usage
-==============================
-+--------------------------------------+-----+------------+------------+--------+-----------------+
-| Image                                | Pods| Containers | Namespaces | Size   | Cached On Nodes |
-+--------------------------------------+-----+------------+------------+--------+-----------------+
-| gcr.io/ml-platform/training-gpu:v2.1 | 4   | 4          | 1          | 1.8 GB | 3               |
-| docker.io/nvidia/cuda:12.0-devel     | 0   | 0          | 0          | 1.5 GB | 2               |
-| quay.io/prometheus/prometheus:v2.47  | 3   | 3          | 1          | 232 MB | 12              |
-+--------------------------------------+-----+------------+------------+--------+-----------------+
+Top 25 Images by Size
+=====================
++--------------------------------------+-----+------------+-----------------+------------+--------+-----------------+
+| Image                                | Pods| Containers | Init Containers | Namespaces | Size   | Cached On Nodes |
++--------------------------------------+-----+------------+-----------------+------------+--------+-----------------+
+| gcr.io/ml-platform/training-gpu:v2.1 | 4   | 4          | 1               | 1          | 1.8 GB | 3               |
+| docker.io/nvidia/cuda:12.0-devel     | 0   | 0          | 0               | 0          | 1.5 GB | 2               |
+| quay.io/prometheus/prometheus:v2.47  | 3   | 3          | 0               | 1          | 232 MB | 12              |
++--------------------------------------+-----+------------+-----------------+------------+--------+-----------------+
 ```
 
 ### JSON output
@@ -183,11 +190,10 @@ kubectl analyze-images -o json | jq '.summary'
 {
   "podsScanned": 560,
   "nodesScanned": 12,
-  "totalImages": 312,
+  "imagesAnalyzed": 312,
   "imagesInUse": 289,
   "unusedImages": 23,
-  "totalSizeBytes": 48318382080,
-  "uniqueSizeBytes": 44891258880
+  "sumOfImageSizesBytes": 48318382080
 }
 ```
 

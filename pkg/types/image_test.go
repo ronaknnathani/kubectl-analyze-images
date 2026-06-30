@@ -116,6 +116,47 @@ func TestGetTopImagesBySize(t *testing.T) {
 	}
 }
 
+func TestGetTopImages_WithSortOptions(t *testing.T) {
+	analysis := &ImageAnalysis{
+		Images: []Image{
+			{Name: "largest-unused", Size: 600, PodCount: 0, CachedOnNodes: 1},
+			{Name: "most-pods", Size: 100, PodCount: 5, CachedOnNodes: 2},
+			{Name: "most-cached", Size: 200, PodCount: 2, CachedOnNodes: 8},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		sortBy ImageSortBy
+		want   []string
+	}{
+		{
+			name:   "sort by size",
+			sortBy: ImageSortBySize,
+			want:   []string{"largest-unused", "most-cached", "most-pods"},
+		},
+		{
+			name:   "sort by pod usage",
+			sortBy: ImageSortByPods,
+			want:   []string{"most-pods", "most-cached", "largest-unused"},
+		},
+		{
+			name:   "sort by cached on nodes",
+			sortBy: ImageSortByCachedOnNodes,
+			want:   []string{"most-cached", "most-pods", "largest-unused"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := analysis.GetTopImages(3, tt.sortBy)
+			for i, name := range tt.want {
+				assert.Equal(t, name, result[i].Name)
+			}
+		})
+	}
+}
+
 func TestNewInaccessibleImage(t *testing.T) {
 	tests := []struct {
 		name      string

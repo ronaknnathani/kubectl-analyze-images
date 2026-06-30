@@ -13,18 +13,23 @@ import (
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/types"
 )
 
+// DefaultSortBy is the default image table sort option.
+const DefaultSortBy = types.ImageSortBySize
+
 // AnalyzeOptions holds all the configuration and dependencies for running image analysis.
 // It follows the kubectl plugin Complete/Validate/Run pattern.
 type AnalyzeOptions struct {
 	// CLI flags
-	Namespace     string
-	LabelSelector string
-	OutputFormat  string
-	NoColor       bool
-	TopImages     int
-	KubeContext   string
-	ShowHistogram bool
-	Wide          bool
+	Namespace          string
+	LabelSelector      string
+	OutputFormat       string
+	NoColor            bool
+	TopImages          int
+	KubeContext        string
+	ShowHistogram      bool
+	TruncateImageNames bool
+	ImageNameParts     int
+	SortBy             string
 
 	// Injected dependencies
 	KubernetesClient kubernetes.Interface
@@ -41,6 +46,9 @@ func (o *AnalyzeOptions) Complete() error {
 	}
 	if o.TopImages == 0 {
 		o.TopImages = 25
+	}
+	if o.SortBy == "" {
+		o.SortBy = string(types.ImageSortBySize)
 	}
 	if o.Out == nil {
 		o.Out = os.Stdout
@@ -74,6 +82,15 @@ func (o *AnalyzeOptions) Validate() error {
 	// Validate top images count
 	if o.TopImages < 1 {
 		return fmt.Errorf("--top-images must be at least 1, got %d", o.TopImages)
+	}
+	if o.ImageNameParts < 1 {
+		return fmt.Errorf("--image-name-parts must be at least 1, got %d", o.ImageNameParts)
+	}
+	switch types.ImageSortBy(o.SortBy) {
+	case types.ImageSortBySize, types.ImageSortByPods, types.ImageSortByCachedOnNodes:
+		// valid
+	default:
+		return fmt.Errorf("invalid sort option %q: must be \"size\", \"pods\", or \"cached-on-nodes\"", o.SortBy)
 	}
 
 	return nil
@@ -122,7 +139,9 @@ func (o *AnalyzeOptions) Run(ctx context.Context) error {
 	rep := reporter.NewReporter(o.OutputFormat)
 	rep.SetNoColor(o.NoColor)
 	rep.SetTopImages(o.TopImages)
-	rep.SetWide(o.Wide)
+	rep.SetTruncateImageNames(o.TruncateImageNames)
+	rep.SetImageNameParts(o.ImageNameParts)
+	rep.SetSortBy(types.ImageSortBy(o.SortBy))
 	if err := rep.GenerateReportTo(o.Out, analysis); err != nil {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}

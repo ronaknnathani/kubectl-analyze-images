@@ -183,8 +183,8 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 
 		// Create the bar with color based on bin position (size range)
 		percentage := float64(bin.Count) / float64(hd.Total) * 100
-		var bar string
 		barChars := strings.Repeat("█", barWidth)
+		padding := strings.Repeat(" ", barMaxWidth-barWidth)
 
 		// Color coding based on size ranges (bin position)
 		// Lower bins (smaller sizes) = green, middle = yellow, higher bins (larger sizes) = red
@@ -195,21 +195,19 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 			}
 			switch {
 			case binPosition < 33:
-				bar = greenBar(barChars)
+				barChars = greenBar(barChars)
 			case binPosition < 67:
-				bar = yellowBar(barChars)
+				barChars = yellowBar(barChars)
 			default:
-				bar = redBar(barChars)
+				barChars = redBar(barChars)
 			}
-		} else {
-			bar = barChars
 		}
 
 		// Format the count and percentage
 		countLabel := fmt.Sprintf("(%d images, %.0f%%)", bin.Count, percentage)
 
 		// Print the row
-		fmt.Fprintf(&result, "  %s : %-*s %s\n", rangeLabel, barMaxWidth, bar, countLabel)
+		fmt.Fprintf(&result, "  %s : %s%s %s\n", rangeLabel, barChars, padding, countLabel)
 	}
 
 	// Statistics in a compact format
@@ -218,7 +216,6 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		result.WriteString("Image Size Summary\n")
 		result.WriteString("==================\n")
 
-		fmt.Fprintf(&result, "Total Images: %d\n", hd.Total)
 		fmt.Fprintf(&result, "Size Range: %s - %s\n", util.FormatBytes(int64(hd.MinValue)), util.FormatBytes(int64(hd.MaxValue)))
 		fmt.Fprintf(&result, "Mean Size: %s\n", util.FormatBytes(int64(hd.Mean)))
 

@@ -6,24 +6,37 @@ import (
 	"github.com/ronaknnathani/kubectl-analyze-images/pkg/util"
 )
 
+// ImageSortBy identifies the metric used to sort image table rows.
+type ImageSortBy string
+
+const (
+	// ImageSortBySize sorts images by image size.
+	ImageSortBySize ImageSortBy = "size"
+	// ImageSortByPods sorts images by pod usage count.
+	ImageSortByPods ImageSortBy = "pods"
+	// ImageSortByCachedOnNodes sorts images by the number of nodes caching the image.
+	ImageSortByCachedOnNodes ImageSortBy = "cached-on-nodes"
+)
+
 // Image represents a container image with its metadata
 type Image struct {
-	Name           string `json:"name"`
-	Size           int64  `json:"sizeBytes"`
-	Registry       string `json:"registry"`
-	Tag            string `json:"tag"`
-	PodCount       int    `json:"podCount"`
-	ContainerCount int    `json:"containerCount"`
-	NamespaceCount int    `json:"namespaceCount"`
-	CachedOnNodes  int    `json:"cachedOnNodes"`
-	Inaccessible   bool   `json:"inaccessible"`
+	Name               string `json:"name"`
+	Size               int64  `json:"sizeBytes"`
+	Registry           string `json:"registry"`
+	Tag                string `json:"tag"`
+	PodCount           int    `json:"podCount"`
+	ContainerCount     int    `json:"containerCount"`
+	InitContainerCount int    `json:"initContainerCount"`
+	NamespaceCount     int    `json:"namespaceCount"`
+	CachedOnNodes      int    `json:"cachedOnNodes"`
+	Inaccessible       bool   `json:"inaccessible"`
 }
 
 // ImageAnalysis represents the analysis results for images
 type ImageAnalysis struct {
 	Images       []Image             `json:"images"`
-	TotalSize    int64               `json:"totalSizeBytes"`
-	UniqueSize   int64               `json:"uniqueSizeBytes"`
+	TotalSize    int64               `json:"sumOfImageSizesBytes"`
+	UniqueSize   int64               `json:"-"`
 	PodsScanned  int                 `json:"podsScanned"`
 	NodesScanned int                 `json:"nodesScanned"`
 	ImagesInUse  int                 `json:"imagesInUse"`
@@ -40,8 +53,13 @@ func (ia *ImageAnalysis) GetUniqueImages() map[string]Image {
 	return uniqueImages
 }
 
-// GetTopImagesBySize returns the top N images sorted by size
+// GetTopImagesBySize returns the top N images sorted by size.
 func (ia *ImageAnalysis) GetTopImagesBySize(n int) []Image {
+	return ia.GetTopImages(n, ImageSortBySize)
+}
+
+// GetTopImages returns the top N images sorted by the requested metric.
+func (ia *ImageAnalysis) GetTopImages(n int, sortBy ImageSortBy) []Image {
 	if n > len(ia.Images) {
 		n = len(ia.Images)
 	}
@@ -50,8 +68,21 @@ func (ia *ImageAnalysis) GetTopImagesBySize(n int) []Image {
 	sorted := make([]Image, len(ia.Images))
 	copy(sorted, ia.Images)
 
-	// Sort by size (descending) using Go's sort package
 	sort.SliceStable(sorted, func(i, j int) bool {
+		switch sortBy {
+		case ImageSortByPods:
+			if sorted[i].PodCount != sorted[j].PodCount {
+				return sorted[i].PodCount > sorted[j].PodCount
+			}
+		case ImageSortByCachedOnNodes:
+			if sorted[i].CachedOnNodes != sorted[j].CachedOnNodes {
+				return sorted[i].CachedOnNodes > sorted[j].CachedOnNodes
+			}
+		default:
+			if sorted[i].Size != sorted[j].Size {
+				return sorted[i].Size > sorted[j].Size
+			}
+		}
 		if sorted[i].Size != sorted[j].Size {
 			return sorted[i].Size > sorted[j].Size
 		}

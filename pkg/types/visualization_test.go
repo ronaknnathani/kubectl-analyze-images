@@ -1,6 +1,7 @@
 package types
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -163,7 +164,7 @@ func TestRenderASCII(t *testing.T) {
 					{Name: "img3", Size: 150000000},
 				},
 			},
-			wantContains: []string{"Image Size Summary", "Total Images", "Size Range"},
+			wantContains: []string{"Image Size Summary", "Size Range", "Mean Size"},
 		},
 		{
 			name: "histogram without stats",
@@ -266,4 +267,45 @@ func TestRenderASCII_SkipsEmptyBins(t *testing.T) {
 
 	// Should only have 2 bars (skipping the empty bin)
 	assert.Equal(t, 2, barCount)
+}
+
+func TestRenderASCII_AlignsCountLabels(t *testing.T) {
+	data := &HistogramData{
+		Bins: []HistogramBin{
+			{Min: 0, Max: 100, Count: 1, Items: []string{"small"}},
+			{Min: 100, Max: 200, Count: 3, Items: []string{"large1", "large2", "large3"}},
+		},
+		Total: 4,
+	}
+	config := &HistogramConfig{
+		Width:      12,
+		ShowStats:  false,
+		ShowColors: true,
+	}
+	analysis := &ImageAnalysis{
+		Images: []Image{
+			{Name: "small", Size: 50},
+			{Name: "large1", Size: 150},
+			{Name: "large2", Size: 150},
+			{Name: "large3", Size: 150},
+		},
+	}
+
+	output := data.RenderASCII(config, analysis)
+	ansiPattern := regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	lines := strings.Split(ansiPattern.ReplaceAllString(output, ""), "\n")
+
+	var countLabelColumn int
+	for _, line := range lines {
+		if !strings.Contains(line, "images") {
+			continue
+		}
+		column := strings.Index(line, "(")
+		runeColumn := len([]rune(line[:column]))
+		if countLabelColumn == 0 {
+			countLabelColumn = runeColumn
+			continue
+		}
+		assert.Equal(t, countLabelColumn, runeColumn)
+	}
 }

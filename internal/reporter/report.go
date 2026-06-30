@@ -10,20 +10,24 @@ import (
 
 // Reporter handles output generation
 type Reporter struct {
-	outputFormat  string
-	showHistogram bool
-	noColor       bool
-	topImages     int
-	wide          bool
+	outputFormat       string
+	showHistogram      bool
+	noColor            bool
+	topImages          int
+	truncateImageNames bool
+	imageNameParts     int
+	sortBy             types.ImageSortBy
 }
 
 // NewReporter creates a new reporter
 func NewReporter(outputFormat string) *Reporter {
 	return &Reporter{
-		outputFormat:  outputFormat,
-		showHistogram: true, // Make histogram default
-		noColor:       false,
-		topImages:     25, // Default to 25 top images
+		outputFormat:   outputFormat,
+		showHistogram:  true, // Make histogram default
+		noColor:        false,
+		topImages:      25, // Default to 25 top images
+		imageNameParts: 1,
+		sortBy:         types.ImageSortBySize,
 	}
 }
 
@@ -42,9 +46,19 @@ func (r *Reporter) SetTopImages(count int) {
 	r.topImages = count
 }
 
-// SetWide disables image name truncation in table output.
-func (r *Reporter) SetWide(wide bool) {
-	r.wide = wide
+// SetTruncateImageNames enables or disables image name truncation in table output.
+func (r *Reporter) SetTruncateImageNames(truncate bool) {
+	r.truncateImageNames = truncate
+}
+
+// SetImageNameParts sets how many slash-separated image path parts truncation keeps.
+func (r *Reporter) SetImageNameParts(parts int) {
+	r.imageNameParts = parts
+}
+
+// SetSortBy sets the metric used to sort image table rows.
+func (r *Reporter) SetSortBy(sortBy types.ImageSortBy) {
+	r.sortBy = sortBy
 }
 
 // GenerateReportTo generates a report to the specified writer
@@ -52,7 +66,7 @@ func (r *Reporter) GenerateReportTo(w io.Writer, analysis *types.ImageAnalysis) 
 	var printer types.Printer
 	switch r.outputFormat {
 	case "table":
-		printer = NewTablePrinter(r.showHistogram, r.noColor, r.topImages, r.wide)
+		printer = NewTablePrinter(r.showHistogram, r.noColor, r.topImages, r.truncateImageNames, r.imageNameParts, r.sortBy)
 	case "json":
 		printer = NewJSONPrinter()
 	default:

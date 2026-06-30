@@ -45,7 +45,9 @@ It extracts image sizes from node status and generates reports with performance 
 	rootCmd.Flags().BoolVar(&o.NoColor, "no-color", false, "Disable colored output (default: false)")
 	rootCmd.Flags().IntVar(&o.TopImages, "top-images", 25, "Number of top images to show in the report (default: 25)")
 	rootCmd.Flags().StringVar(&o.KubeContext, "context", "", "Kubernetes context to use (default: current context)")
-	rootCmd.Flags().BoolVar(&o.Wide, "wide", false, "Show full image names without truncation")
+	rootCmd.Flags().BoolVar(&o.TruncateImageNames, "truncate-image-names", false, "Truncate image names in table output (default: false)")
+	rootCmd.Flags().IntVar(&o.ImageNameParts, "image-name-parts", 1, "Number of trailing slash-separated image name parts to keep when truncating")
+	rootCmd.Flags().StringVar(&o.SortBy, "sort-by", string(plugin.DefaultSortBy), "Sort image table by: size, pods, cached-on-nodes")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

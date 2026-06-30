@@ -28,6 +28,24 @@ func createTestPod(name, namespace string, images ...string) *corev1.Pod {
 	}
 }
 
+func createTestPodWithInitContainers(name, namespace string, images, initImages []string) *corev1.Pod {
+	containers := make([]corev1.Container, len(images))
+	for i, img := range images {
+		containers[i] = corev1.Container{Name: fmt.Sprintf("container-%d", i), Image: img}
+	}
+	initContainers := make([]corev1.Container, len(initImages))
+	for i, img := range initImages {
+		initContainers[i] = corev1.Container{Name: fmt.Sprintf("init-container-%d", i), Image: img}
+	}
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: corev1.PodSpec{
+			Containers:     containers,
+			InitContainers: initContainers,
+		},
+	}
+}
+
 // createTestNode creates a test node with the given name and images
 func createTestNode(name string, images map[string]int64) *corev1.Node {
 	nodeImages := make([]corev1.ContainerImage, 0, len(images))
@@ -95,6 +113,38 @@ func TestPodAnalyzer_AnalyzePods_WithPods(t *testing.T) {
 	assert.Equal(t, int64(50000000), redisImg.Size)
 	assert.Equal(t, "6.2", redisImg.Tag)
 	assert.False(t, redisImg.Inaccessible)
+}
+
+func TestPodAnalyzer_AnalyzePods_SegregatesInitContainers(t *testing.T) {
+	ctx := context.Background()
+	pod1 := createTestPodWithInitContainers("pod1", "default", []string{"app:v1"}, []string{"setup:v1"})
+	pod2 := createTestPodWithInitContainers("pod2", "default", []string{"app:v1"}, []string{"app:v1", "setup:v1"})
+	node := createTestNode("node1", map[string]int64{
+		"app:v1":   100000000,
+		"setup:v1": 50000000,
+	})
+
+	fakeK8s := kubernetes.NewFakeClient(pod1, pod2, node)
+	clusterClient := cluster.NewClient(fakeK8s)
+	podAnalyzer := NewPodAnalyzer(clusterClient, types.DefaultAnalysisConfig())
+
+	result, err := podAnalyzer.AnalyzePods(ctx, "default", "")
+	require.NoError(t, err)
+
+	imageMap := make(map[string]types.Image)
+	for _, img := range result.Images {
+		imageMap[img.Name] = img
+	}
+
+	appImg := imageMap["app:v1"]
+	assert.Equal(t, 2, appImg.PodCount)
+	assert.Equal(t, 2, appImg.ContainerCount)
+	assert.Equal(t, 1, appImg.InitContainerCount)
+
+	setupImg := imageMap["setup:v1"]
+	assert.Equal(t, 2, setupImg.PodCount)
+	assert.Equal(t, 0, setupImg.ContainerCount)
+	assert.Equal(t, 2, setupImg.InitContainerCount)
 }
 
 func TestPodAnalyzer_AnalyzePods_NoNamespace(t *testing.T) {

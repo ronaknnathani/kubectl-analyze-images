@@ -19,25 +19,23 @@ type jsonReport struct {
 }
 
 type jsonSummary struct {
-	PodsScanned  int   `json:"podsScanned"`
-	NodesScanned int   `json:"nodesScanned"`
-	TotalImages  int   `json:"totalImages"`
-	ImagesInUse  int   `json:"imagesInUse"`
-	UnusedImages int   `json:"unusedImages"`
-	TotalSize    int64 `json:"totalSizeBytes"`
-	UniqueSize   int64 `json:"uniqueSizeBytes"`
+	PodsScanned     int   `json:"podsScanned"`
+	NodesScanned    int   `json:"nodesScanned"`
+	ImagesAnalyzed  int   `json:"imagesAnalyzed"`
+	ImagesInUse     int   `json:"imagesInUse"`
+	UnusedImages    int   `json:"unusedImages"`
+	SumOfImageSizes int64 `json:"sumOfImageSizesBytes"`
 }
 
 func TestJSONPrinter_Print(t *testing.T) {
 	tests := []struct {
-		name              string
-		analysis          *types.ImageAnalysis
-		wantImagesCount   int
-		wantTotalImages   int
-		wantTotalSize     int64
-		wantUniqueSize    int64
-		wantPerformance   bool
-		wantImagesNotNull bool
+		name                string
+		analysis            *types.ImageAnalysis
+		wantImagesCount     int
+		wantImagesAnalyzed  int
+		wantSumOfImageSizes int64
+		wantPerformance     bool
+		wantImagesNotNull   bool
 	}{
 		{
 			name: "valid JSON structure",
@@ -53,12 +51,11 @@ func TestJSONPrinter_Print(t *testing.T) {
 					TotalTime:       1500 * time.Millisecond,
 				},
 			},
-			wantImagesCount:   2,
-			wantTotalImages:   2,
-			wantTotalSize:     243000000,
-			wantUniqueSize:    200000000,
-			wantPerformance:   true,
-			wantImagesNotNull: true,
+			wantImagesCount:     2,
+			wantImagesAnalyzed:  2,
+			wantSumOfImageSizes: 243000000,
+			wantPerformance:     true,
+			wantImagesNotNull:   true,
 		},
 		{
 			name: "empty images produces valid JSON",
@@ -68,12 +65,11 @@ func TestJSONPrinter_Print(t *testing.T) {
 				UniqueSize:  0,
 				Performance: nil,
 			},
-			wantImagesCount:   0,
-			wantTotalImages:   0,
-			wantTotalSize:     0,
-			wantUniqueSize:    0,
-			wantPerformance:   false,
-			wantImagesNotNull: true,
+			wantImagesCount:     0,
+			wantImagesAnalyzed:  0,
+			wantSumOfImageSizes: 0,
+			wantPerformance:     false,
+			wantImagesNotNull:   true,
 		},
 		{
 			name: "performance metrics included",
@@ -92,12 +88,11 @@ func TestJSONPrinter_Print(t *testing.T) {
 					TotalTime:       2000 * time.Millisecond,
 				},
 			},
-			wantImagesCount:   5,
-			wantTotalImages:   5,
-			wantTotalSize:     350000000,
-			wantUniqueSize:    350000000,
-			wantPerformance:   true,
-			wantImagesNotNull: true,
+			wantImagesCount:     5,
+			wantImagesAnalyzed:  5,
+			wantSumOfImageSizes: 350000000,
+			wantPerformance:     true,
+			wantImagesNotNull:   true,
 		},
 		{
 			name: "no performance when nil",
@@ -109,12 +104,11 @@ func TestJSONPrinter_Print(t *testing.T) {
 				UniqueSize:  5000000,
 				Performance: nil,
 			},
-			wantImagesCount:   1,
-			wantTotalImages:   1,
-			wantTotalSize:     5000000,
-			wantUniqueSize:    5000000,
-			wantPerformance:   false,
-			wantImagesNotNull: true,
+			wantImagesCount:     1,
+			wantImagesAnalyzed:  1,
+			wantSumOfImageSizes: 5000000,
+			wantPerformance:     false,
+			wantImagesNotNull:   true,
 		},
 	}
 
@@ -135,9 +129,8 @@ func TestJSONPrinter_Print(t *testing.T) {
 				assert.Equal(t, tt.wantImagesCount, len(result.Images), "images array should have correct length")
 			}
 
-			assert.Equal(t, tt.wantTotalImages, result.Summary.TotalImages, "totalImages should match")
-			assert.Equal(t, tt.wantTotalSize, result.Summary.TotalSize, "totalSize should match")
-			assert.Equal(t, tt.wantUniqueSize, result.Summary.UniqueSize, "uniqueSize should match")
+			assert.Equal(t, tt.wantImagesAnalyzed, result.Summary.ImagesAnalyzed, "imagesAnalyzed should match")
+			assert.Equal(t, tt.wantSumOfImageSizes, result.Summary.SumOfImageSizes, "sumOfImageSizesBytes should match")
 
 			if tt.wantPerformance {
 				require.NotNil(t, result.Performance, "performance should not be nil")

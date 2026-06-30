@@ -6,9 +6,11 @@ import (
 
 // Pod represents a simplified pod structure for analysis
 type Pod struct {
-	Name      string
-	Namespace string
-	Images    []string
+	Name                string
+	Namespace           string
+	Images              []string
+	ContainerImages     []string
+	InitContainerImages []string
 }
 
 // PodList represents a collection of pods
@@ -19,15 +21,18 @@ type PodList struct {
 // FromK8sPod converts a Kubernetes pod to our internal Pod type
 func FromK8sPod(k8sPod *corev1.Pod) Pod {
 	pod := Pod{
-		Name:      k8sPod.Name,
-		Namespace: k8sPod.Namespace,
-		Images:    make([]string, 0),
+		Name:                k8sPod.Name,
+		Namespace:           k8sPod.Namespace,
+		Images:              make([]string, 0),
+		ContainerImages:     make([]string, 0),
+		InitContainerImages: make([]string, 0),
 	}
 
 	// Extract container images
 	for _, container := range k8sPod.Spec.Containers {
 		if container.Image != "" {
 			pod.Images = append(pod.Images, container.Image)
+			pod.ContainerImages = append(pod.ContainerImages, container.Image)
 		}
 	}
 
@@ -35,6 +40,7 @@ func FromK8sPod(k8sPod *corev1.Pod) Pod {
 	for _, container := range k8sPod.Spec.InitContainers {
 		if container.Image != "" {
 			pod.Images = append(pod.Images, container.Image)
+			pod.InitContainerImages = append(pod.InitContainerImages, container.Image)
 		}
 	}
 
