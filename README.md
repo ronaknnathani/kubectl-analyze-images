@@ -128,24 +128,10 @@ kubectl analyze-images --no-color
 
 ### Example output
 
+![kubectl analyze-images table output](docs/images/analyze-images-output.png)
+
 ```
 Analyzing images in namespace: All
-
-✓ Found 560 pods across all namespaces (query time: 1.1s)
-✓ Found 312 unique images from 12 nodes (query time: 1.2s)
-✓ Completed analyzing 312 images (time: 150ms)
-
-Performance Summary
-==================
-+---------------------+-------+
-| Metric              | Value |
-+---------------------+-------+
-| Node Query Time     | 1.2s  |
-| Pod Query Time      | 1.1s  |
-| Image Analysis Time | 150ms |
-| Total Time          | 1.3s  |
-| Images Processed    | 312   |
-+---------------------+-------+
 
 Image Analysis Summary
 =====================
@@ -158,6 +144,10 @@ Image Analysis Summary
 | Images In Use           | 289    |
 | Images Not Used By Pods | 23     |
 | Sum Of Image Sizes      | 45 GB  |
+| Pod Query Time          | 1.1s   |
+| Node Query Time         | 1.2s   |
+| Image Analysis Time     | 150ms  |
+| Total Time              | 1.3s   |
 +-------------------------+--------+
 
 Image Size Distribution
@@ -168,6 +158,14 @@ Image Size Distribution
  300MB-500MB : ████████ (38 images, 12%)
  500MB-  1GB : ████ (28 images, 9%)
    1GB-  2GB : ██ (17 images, 5%)
+
+Image Size Percentiles
+======================
+ - P0 (Min)      : 0 B
+ - P10           : 40 MB
+ - P50 (Median)  : 125 MB
+ - P90           : 780 MB
+ - P100 (Max)    : 1.8 GB
 
 Top 25 Images by Size
 =====================

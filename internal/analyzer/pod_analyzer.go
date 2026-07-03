@@ -126,11 +126,6 @@ func (pa *PodAnalyzer) AnalyzePods(ctx context.Context, namespace, labelSelector
 	s.Stop()
 	imageAnalysisTime := time.Since(imageAnalysisStart)
 
-	// Show completion message
-	if _, err := fmt.Fprintf(pa.errOut, "✓ Completed analyzing %d images (time: %v)\n", processedCount, imageAnalysisTime); err != nil {
-		return nil, fmt.Errorf("failed to write image analysis result: %w", err)
-	}
-
 	// Update performance metrics
 	perfMetrics.ImageAnalysisTime = imageAnalysisTime
 	perfMetrics.TotalTime = time.Since(overallStart)

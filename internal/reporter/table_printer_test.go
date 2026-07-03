@@ -40,14 +40,14 @@ func TestTablePrinter_Print(t *testing.T) {
 			noColor:       true,
 			topImages:     25,
 			wantContains: []string{
-				"Performance Summary",
 				"Image Analysis Summary",
 				"nginx:1.21",
 				"redis:6.2",
 				"Images Analyzed",
 				"Sum Of Image Sizes",
+				"Total Time",
 			},
-			wantNotContain: []string{},
+			wantNotContain: []string{"Performance Summary"},
 		},
 		{
 			name: "empty analysis",
@@ -187,12 +187,12 @@ func TestTablePrinter_Print_PerformanceMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	output := buf.String()
-	assert.Contains(t, output, "Performance Summary")
+	assert.NotContains(t, output, "Performance Summary")
+	assert.Contains(t, output, "Image Analysis Summary")
 	assert.Contains(t, output, "Pod Query Time")
 	assert.Contains(t, output, "Node Query Time")
 	assert.Contains(t, output, "Image Analysis Time")
 	assert.Contains(t, output, "Total Time")
-	assert.Contains(t, output, "Images Processed")
 }
 
 func TestTablePrinter_Print_TopImagesLimit(t *testing.T) {

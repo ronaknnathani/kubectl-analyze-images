@@ -164,7 +164,7 @@ func TestRenderASCII(t *testing.T) {
 					{Name: "img3", Size: 150000000},
 				},
 			},
-			wantContains: []string{"Image Size Summary", "Size Range", "Mean Size"},
+			wantContains: []string{"Image Size Percentiles", "P0 (Min)", "P100 (Max)"},
 		},
 		{
 			name: "histogram without stats",

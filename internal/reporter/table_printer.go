@@ -36,40 +36,6 @@ func NewTablePrinter(showHistogram, noColor bool, topImages int, truncateImageNa
 
 // Print writes the analysis as formatted tables to the provided writer
 func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error {
-	// Performance Summary
-	if analysis.Performance != nil {
-		if err := writeLines(w, "Performance Summary", "=================="); err != nil {
-			return err
-		}
-
-		performanceTable := tablewriter.NewWriter(w)
-		performanceTable.Header("Metric", "Value")
-		if analysis.Performance.PodQueryTime > 0 {
-			if err := performanceTable.Append("Pod Query Time", analysis.Performance.PodQueryTime.String()); err != nil {
-				return fmt.Errorf("failed to append pod query time: %w", err)
-			}
-		}
-		if analysis.Performance.NodeQueryTime > 0 {
-			if err := performanceTable.Append("Node Query Time", analysis.Performance.NodeQueryTime.String()); err != nil {
-				return fmt.Errorf("failed to append node query time: %w", err)
-			}
-		}
-		if err := appendRows(performanceTable,
-			[]string{"Image Analysis Time", analysis.Performance.ImageAnalysisTime.String()},
-			[]string{"Total Time", analysis.Performance.TotalTime.String()},
-			[]string{"Images Processed", strconv.Itoa(analysis.Performance.ImagesProcessed)},
-		); err != nil {
-			return err
-		}
-		if err := performanceTable.Render(); err != nil {
-			return fmt.Errorf("failed to render performance table: %w", err)
-		}
-		if _, err := fmt.Fprintln(w); err != nil {
-			return fmt.Errorf("failed to write performance table spacer: %w", err)
-		}
-	}
-
-	// Image Analysis Summary
 	if err := writeLines(w, "Image Analysis Summary", "====================="); err != nil {
 		return err
 	}
@@ -85,6 +51,28 @@ func (tp *TablePrinter) Print(w io.Writer, analysis *types.ImageAnalysis) error 
 		[]string{"Sum Of Image Sizes", util.FormatBytes(analysis.TotalSize)},
 	); err != nil {
 		return err
+	}
+	if analysis.Performance != nil {
+		if analysis.Performance.PodQueryTime > 0 {
+			if err := summaryTable.Append("Pod Query Time", analysis.Performance.PodQueryTime.String()); err != nil {
+				return fmt.Errorf("failed to append pod query time: %w", err)
+			}
+		}
+		if analysis.Performance.NodeQueryTime > 0 {
+			if err := summaryTable.Append("Node Query Time", analysis.Performance.NodeQueryTime.String()); err != nil {
+				return fmt.Errorf("failed to append node query time: %w", err)
+			}
+		}
+		if analysis.Performance.ImageAnalysisTime > 0 {
+			if err := summaryTable.Append("Image Analysis Time", analysis.Performance.ImageAnalysisTime.String()); err != nil {
+				return fmt.Errorf("failed to append image analysis time: %w", err)
+			}
+		}
+		if analysis.Performance.TotalTime > 0 {
+			if err := summaryTable.Append("Total Time", analysis.Performance.TotalTime.String()); err != nil {
+				return fmt.Errorf("failed to append total time: %w", err)
+			}
+		}
 	}
 	if err := summaryTable.Render(); err != nil {
 		return fmt.Errorf("failed to render summary table: %w", err)

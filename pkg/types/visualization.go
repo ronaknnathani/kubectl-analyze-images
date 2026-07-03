@@ -210,18 +210,9 @@ func (hd *HistogramData) RenderASCII(config *HistogramConfig, analysis *ImageAna
 		fmt.Fprintf(&result, "  %s : %s%s %s\n", rangeLabel, barChars, padding, countLabel)
 	}
 
-	// Statistics in a compact format
 	if config.ShowStats {
-		result.WriteString("\n")
-		result.WriteString("Image Size Summary\n")
-		result.WriteString("==================\n")
-
-		fmt.Fprintf(&result, "Size Range: %s - %s\n", util.FormatBytes(int64(hd.MinValue)), util.FormatBytes(int64(hd.MaxValue)))
-		fmt.Fprintf(&result, "Mean Size: %s\n", util.FormatBytes(int64(hd.Mean)))
-
-		// Add percentile information similar to kubectl-node_resource
-		result.WriteString("\nSize Percentiles\n")
-		result.WriteString("================\n")
+		result.WriteString("\nImage Size Percentiles\n")
+		result.WriteString("======================\n")
 
 		// Use actual image sizes for percentile calculation (more accurate)
 		actualSizes := make([]int64, 0, len(analysis.Images))

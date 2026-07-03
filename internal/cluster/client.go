@@ -89,7 +89,7 @@ func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) 
 
 		// Update spinner with progress every 100 pods
 		if totalPods%100 == 0 {
-			s.Suffix = fmt.Sprintf(" Querying pods from cluster (namespace: %s)... %d pods found",
+			s.Suffix = fmt.Sprintf(" Querying pods from cluster (namespace: %s)... %d pods",
 				namespaceDisplay(namespace), totalPods)
 		}
 
@@ -102,18 +102,7 @@ func (c *Client) ListPods(ctx context.Context, namespace, labelSelector string) 
 	}
 
 	podQueryTime := time.Since(startTime)
-	s.Stop() // Stop spinner before success message
-
-	// Show success message with pod count
-	if namespace == "" {
-		if _, err := fmt.Fprintf(c.errOut, "✓ Found %d pods across all namespaces (query time: %v)\n", totalPods, podQueryTime); err != nil {
-			return nil, nil, fmt.Errorf("failed to write pod query result: %w", err)
-		}
-	} else {
-		if _, err := fmt.Fprintf(c.errOut, "✓ Found %d pods in namespace %s (query time: %v)\n", totalPods, namespace, podQueryTime); err != nil {
-			return nil, nil, fmt.Errorf("failed to write pod query result: %w", err)
-		}
-	}
+	s.Stop()
 
 	metrics := &types.PerformanceMetrics{
 		PodQueryTime: podQueryTime,
@@ -199,10 +188,6 @@ func (c *Client) GetImageSizesFromNodes(ctx context.Context) (*ImageInventory, *
 
 	inventory.NodesScanned = totalNodes
 	inventory.ImagesReported = totalImages
-	if _, err := fmt.Fprintf(c.errOut, "✓ Found %d unique images from %d nodes (query time: %v)\n",
-		len(inventory.DisplayNames), totalNodes, nodeQueryTime); err != nil {
-		return nil, nil, fmt.Errorf("failed to write node query result: %w", err)
-	}
 
 	metrics := &types.PerformanceMetrics{
 		NodeQueryTime: nodeQueryTime,
