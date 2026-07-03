@@ -51,7 +51,7 @@ The plugin lists pods and nodes with read-only Kubernetes API calls. Pod specs p
 ## Development
 
 ```bash
-make build          # Build the plugin
+make build          # Run deps, tests, lint, then build the plugin
 make test           # Run tests
 make lint           # Run golangci-lint
 make ci             # Run the same checks as GitHub Actions
@@ -64,8 +64,8 @@ make snapshot       # Build snapshot release locally
 
 ```bash
 make ci
-git tag -a v1.1.0 -m "Release v1.1.0"
-git push origin v1.1.0
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
 ```
 
 GoReleaser publishes release artifacts via GitHub Actions. Update `plugins/analyze-images.yaml` with checksums from the release before distributing via krew.
