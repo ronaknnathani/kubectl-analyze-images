@@ -6,17 +6,17 @@
 
 ## Installation
 
+### Install script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ronaknnathani/kubectl-analyze-images/main/install.sh | sh
+```
+
+By default, the script installs to `/usr/local/bin` when writable, otherwise `~/.local/bin`. Override with `INSTALL_DIR=/path/to/bin`.
+
 ### GitHub releases
 
 Download the latest archive for your platform from the [releases page](https://github.com/ronaknnathani/kubectl-analyze-images/releases), then place the binary on your `PATH`.
-
-```bash
-curl -LO https://github.com/ronaknnathani/kubectl-analyze-images/releases/latest/download/kubectl-analyze-images_1.0.0_darwin_arm64.tar.gz
-tar xzf kubectl-analyze-images_1.0.0_darwin_arm64.tar.gz
-sudo mv kubectl-analyze-images /usr/local/bin/
-```
-
-Use the matching archive for Linux, Intel macOS, or Windows from the release assets.
 
 ### krew
 
@@ -54,6 +54,7 @@ The plugin lists pods and nodes with read-only Kubernetes API calls. Pod specs p
 make build          # Build the plugin
 make test           # Run tests
 make lint           # Run golangci-lint
+make ci             # Run the same checks as GitHub Actions
 make check          # Run tests and linter
 make test-coverage  # Run tests with coverage report
 make snapshot       # Build snapshot release locally
@@ -62,7 +63,7 @@ make snapshot       # Build snapshot release locally
 ## Releasing
 
 ```bash
-make check
+make ci
 git tag -a v1.1.0 -m "Release v1.1.0"
 git push origin v1.1.0
 ```

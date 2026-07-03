@@ -1,4 +1,4 @@
-.PHONY: build clean test test-coverage install install-plugin deps run lint snapshot check help
+.PHONY: build clean test test-coverage install install-plugin deps run lint snapshot check ci help
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -26,10 +26,20 @@ test-coverage:
 
 # Run linter
 lint:
+	golangci-lint config verify
 	golangci-lint run ./...
 
 # Run all checks (test + lint)
 check: test lint
+
+# Run the same checks as GitHub Actions
+ci:
+	go test -race -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
+	golangci-lint config verify
+	golangci-lint run ./...
+	go build -o kubectl-analyze-images ./cmd/kubectl-analyze-images
+	./kubectl-analyze-images --version
 
 # Local release test (no publish)
 snapshot:
@@ -64,6 +74,7 @@ help:
 	@echo "  test-coverage  - Run tests with coverage report"
 	@echo "  lint           - Run golangci-lint"
 	@echo "  check          - Run tests and linter"
+	@echo "  ci             - Run the same checks as GitHub Actions"
 	@echo "  snapshot       - Build snapshot release (goreleaser)"
 	@echo "  install        - Install to ~/.local/bin"
 	@echo "  install-plugin - Install as kubectl plugin"
