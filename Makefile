@@ -4,6 +4,9 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+GOLANGCI_LINT_VERSION ?= v1.64.8
+TOOLS_DIR := $(CURDIR)/.tools
+GOLANGCI_LINT := $(TOOLS_DIR)/golangci-lint/$(GOLANGCI_LINT_VERSION)/golangci-lint
 
 # Build the plugin after dependency, test, and lint checks
 build: deps test lint
@@ -25,21 +28,25 @@ test-coverage:
 	go tool cover -func=coverage.out
 
 # Run linter
-lint:
-	golangci-lint config verify
-	golangci-lint run ./...
+lint: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) config verify
+	$(GOLANGCI_LINT) run ./...
 
 # Run all checks (test + lint)
 check: test lint
 
 # Run the same checks as GitHub Actions
-ci:
+ci: $(GOLANGCI_LINT)
 	go test -race -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out
-	golangci-lint config verify
-	golangci-lint run ./...
+	$(GOLANGCI_LINT) config verify
+	$(GOLANGCI_LINT) run ./...
 	go build -o kubectl-analyze-images ./cmd/kubectl-analyze-images
 	./kubectl-analyze-images --version
+
+$(GOLANGCI_LINT):
+	mkdir -p $(dir $@)
+	GOBIN=$(dir $@) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 # Local release test (no publish)
 snapshot:

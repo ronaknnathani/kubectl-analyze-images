@@ -39,3 +39,4 @@ Thumbs.db
 
 # Cache directories
 .cache/
+.tools/

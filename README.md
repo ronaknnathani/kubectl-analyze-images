@@ -53,7 +53,7 @@ The plugin lists pods and nodes with read-only Kubernetes API calls. Pod specs p
 ```bash
 make build          # Run deps, tests, lint, then build the plugin
 make test           # Run tests
-make lint           # Run golangci-lint
+make lint           # Run pinned golangci-lint
 make ci             # Run the same checks as GitHub Actions
 make check          # Run tests and linter
 make test-coverage  # Run tests with coverage report
