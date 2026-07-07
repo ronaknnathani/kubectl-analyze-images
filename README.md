@@ -2,7 +2,7 @@
 
 ![kubectl analyze-images table output](docs/images/analyze-images-output.png)
 
-`kubectl analyze-images` shows which container images are present and in use across a Kubernetes cluster. It reports node-local image sizes, pod/container usage, cached-on-node counts, and image size distribution using Kubernetes pod and node status data only -- no registry credentials required.
+`kubectl analyze-images` gives you an at-a-glance view of the largest and most-used container images in a Kubernetes cluster, with image sizes, pod usage, and cached-on-node counts in one easy-to-scan report.
 
 ## Installation
 
