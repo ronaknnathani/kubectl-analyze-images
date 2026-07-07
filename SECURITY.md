@@ -19,8 +19,6 @@ Instead, please open a GitHub issue with the **"security"** label and include:
 3. Any relevant logs or error output
 4. Your assessment of the severity
 
-We will acknowledge your report within **7 days** and provide a timeline for a fix.
-
 ## Scope
 
 kubectl-analyze-images is a **read-only** kubectl plugin with a limited attack surface:
@@ -40,7 +38,7 @@ The primary security considerations are:
 We follow a coordinated disclosure process:
 
 1. Reporter submits vulnerability
-2. We acknowledge within 7 days
+2. We triage the report and determine severity
 3. We investigate and develop a fix
 4. We release a patched version
 5. We publicly disclose the vulnerability after the fix is available

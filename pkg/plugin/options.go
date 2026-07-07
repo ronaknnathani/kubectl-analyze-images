@@ -26,6 +26,7 @@ type AnalyzeOptions struct {
 	NoColor            bool
 	TopImages          int
 	KubeContext        string
+	Kubeconfig         string
 	ShowHistogram      bool
 	TruncateImageNames bool
 	ImageNameParts     int
@@ -59,7 +60,7 @@ func (o *AnalyzeOptions) Complete() error {
 
 	// Create kubernetes client if not injected (production path)
 	if o.KubernetesClient == nil {
-		k8sClient, err := kubernetes.NewClient(o.KubeContext)
+		k8sClient, err := kubernetes.NewClient(o.KubeContext, o.Kubeconfig)
 		if err != nil {
 			return fmt.Errorf("failed to create kubernetes client: %w", err)
 		}

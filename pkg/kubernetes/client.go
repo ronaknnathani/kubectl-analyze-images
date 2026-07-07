@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -23,9 +24,12 @@ var _ Interface = (*Client)(nil)
 // NewClient creates a new Kubernetes client that loads kubeconfig.
 // If contextName is empty, uses the current context from kubeconfig.
 // Returns Interface, not *Client, to enable dependency injection.
-func NewClient(contextName string) (Interface, error) {
+func NewClient(contextName, kubeconfigPath string) (Interface, error) {
 	// Load kubeconfig with context
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if kubeconfigPath != "" {
+		loadingRules.ExplicitPath = kubeconfigPath
+	}
 	configOverrides := &clientcmd.ConfigOverrides{}
 	if contextName != "" {
 		configOverrides.CurrentContext = contextName

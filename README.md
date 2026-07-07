@@ -40,6 +40,7 @@ Requires Go 1.23+.
 ```bash
 kubectl analyze-images
 kubectl analyze-images -n production -l app=web
+kubectl analyze-images --context=prod --kubeconfig=/path/to/kubeconfig
 kubectl analyze-images --sort-by=pods --top-images=50
 kubectl analyze-images -o json
 ```
