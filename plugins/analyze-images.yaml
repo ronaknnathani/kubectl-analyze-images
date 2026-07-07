@@ -3,7 +3,7 @@ kind: Plugin
 metadata:
   name: analyze-images
 spec:
-  version: v1.3.0
+  version: v1.4.0
   homepage: https://github.com/ronaknnathani/kubectl-analyze-images
   shortDescription: "Visualize Kubernetes image usage and sizes"
   description: |
@@ -25,41 +25,41 @@ spec:
         matchLabels:
           os: linux
           arch: amd64
-      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.3.0/kubectl-analyze-images_1.3.0_linux_amd64.tar.gz
-      sha256: a84eaae80db9f172d34e6ff6c7f05de5cf3436ce62cd3f950db320e61ac01411
+      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.4.0/kubectl-analyze-images_1.4.0_linux_amd64.tar.gz
+      sha256: f601add4c349e36ff83c3cc2dd4275f2413e1923609d3d9cdc599f49854f9e37
       bin: kubectl-analyze-images
     - selector:
         matchLabels:
           os: linux
           arch: arm64
-      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.3.0/kubectl-analyze-images_1.3.0_linux_arm64.tar.gz
-      sha256: 3bc1021e9ffee90c984ce219e329a23f51d647998af3a8f91355b4081fc95865
+      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.4.0/kubectl-analyze-images_1.4.0_linux_arm64.tar.gz
+      sha256: 564aea44c24894aa8c54c38ba80a67953c23f5fe79eab27305464cbae462ecf9
       bin: kubectl-analyze-images
     - selector:
         matchLabels:
           os: darwin
           arch: amd64
-      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.3.0/kubectl-analyze-images_1.3.0_darwin_amd64.tar.gz
-      sha256: a038c28dad6129dc609843ace443c75dc24cceb758975242346b8ce7ecda9c2f
+      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.4.0/kubectl-analyze-images_1.4.0_darwin_amd64.tar.gz
+      sha256: 89bf7e0d8dbf3dbf672c052dfc20759266a67e97a7569cca860e808571fd95e1
       bin: kubectl-analyze-images
     - selector:
         matchLabels:
           os: darwin
           arch: arm64
-      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.3.0/kubectl-analyze-images_1.3.0_darwin_arm64.tar.gz
-      sha256: 7a60f0287eece3491a500d35e2bc3422903329db47f0abde26093435d1b271f2
+      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.4.0/kubectl-analyze-images_1.4.0_darwin_arm64.tar.gz
+      sha256: 5ba67fa2a64e61ef91601db6095cd3bb451eb901f56ab2aab6152e953abbe905
       bin: kubectl-analyze-images
     - selector:
         matchLabels:
           os: windows
           arch: amd64
-      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.3.0/kubectl-analyze-images_1.3.0_windows_amd64.zip
-      sha256: 65172f46a862bf40ca2be569b8ce3da1adfd982969622245425e1fd74ae8c118
+      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.4.0/kubectl-analyze-images_1.4.0_windows_amd64.zip
+      sha256: d45e12c80b8ed934042f34b86d78c7a6d91abfe9ee54765fd83d40f5b362e547
       bin: kubectl-analyze-images.exe
     - selector:
         matchLabels:
           os: windows
           arch: arm64
-      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.3.0/kubectl-analyze-images_1.3.0_windows_arm64.zip
-      sha256: 6d715c55298c18daf24e8e06b78ccfde6bde29590a2604eca9a99f94897b4304
+      uri: https://github.com/ronaknnathani/kubectl-analyze-images/releases/download/v1.4.0/kubectl-analyze-images_1.4.0_windows_arm64.zip
+      sha256: efd40f0511d231ee021570593d14ef9455e52bb7626761d90449269d8357878e
       bin: kubectl-analyze-images.exe
