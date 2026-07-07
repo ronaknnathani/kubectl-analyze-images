@@ -45,7 +45,10 @@ Run `make ci` before pushing meaningful code, workflow, or release changes. For 
 
 - Tags are annotated semver tags (`vX.Y.Z`) and trigger the Release workflow.
 - GoReleaser publishes archives and `checksums.txt`.
-- After a release, update `plugins/analyze-images.yaml` with the new version, asset URLs, and SHA256 checksums before krew distribution.
+- Future archive names include the full tag (`kubectl-analyze-images_v0.x.y_<os>_<arch>`) so `.krew.yaml` can be rendered by krew-release-bot.
+- `.krew.yaml` is the krew-release-bot template. Keep it in sync with `plugins/analyze-images.yaml`.
+- krew-release-bot runs after GoReleaser and opens krew-index update PRs for non-prerelease GitHub releases. The first krew-index submission is still manual.
+- After a release, verify `plugins/analyze-images.yaml` or the krew-release-bot PR has the new version, asset URLs, and SHA256 checksums.
 
 ## Krew best-practices checklist
 
