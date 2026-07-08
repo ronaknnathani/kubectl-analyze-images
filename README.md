@@ -21,7 +21,7 @@ Download the latest archive for your platform from the [releases page](https://g
 ### krew
 
 ```bash
-kubectl krew install --manifest=plugins/analyze-images.yaml
+kubectl krew install analyze-images
 ```
 
 ### Source
@@ -33,7 +33,7 @@ make build
 make install
 ```
 
-Requires Go 1.23+.
+Requires Go 1.26+.
 
 ## Usage
 
@@ -43,6 +43,7 @@ kubectl analyze-images -n production -l app=web
 kubectl analyze-images --context=prod --kubeconfig=/path/to/kubeconfig
 kubectl analyze-images --sort-by=pods --top-images=50
 kubectl analyze-images -o json
+kubectl analyze-images --truncate-image-names --image-name-parts=2
 ```
 
 ## How it works
