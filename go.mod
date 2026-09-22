@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/briandowns/spinner v1.23.2
 	github.com/fatih/color v1.19.0
-	github.com/olekukonko/tablewriter v1.1.4
+	github.com/olekukonko/tablewriter v1.1.5
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	k8s.io/api v0.37.0
