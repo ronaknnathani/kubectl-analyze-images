@@ -2,7 +2,14 @@
 set -eu
 
 REPO="ronaknnathani/kubectl-analyze-images"
+# Name of the binary shipped inside the release archive.
 BINARY="kubectl-analyze-images"
+# Name the plugin is installed as. kubectl maps a dash in a subcommand to an
+# underscore in the plugin filename, so it looks for "kubectl-analyze_images"
+# when you run "kubectl analyze-images". Installing under the dashed name would
+# instead be invoked as "kubectl analyze images" (two subcommands). See
+# https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/#naming-a-plugin
+PLUGIN="kubectl-analyze_images"
 
 detect_os() {
 	case "$(uname -s)" in
@@ -65,9 +72,11 @@ if [ ! -f "$TMP_DIR/$BINARY" ]; then
 fi
 
 chmod +x "$TMP_DIR/$BINARY"
-cp "$TMP_DIR/$BINARY" "$DEST_DIR/$BINARY"
+cp "$TMP_DIR/$BINARY" "$DEST_DIR/$PLUGIN"
 
-echo "Installed $BINARY to $DEST_DIR/$BINARY"
-if ! command -v "$BINARY" >/dev/null 2>&1; then
-	echo "Add $DEST_DIR to your PATH to run $BINARY directly." >&2
+echo "Installed $PLUGIN to $DEST_DIR/$PLUGIN"
+if ! command -v "$PLUGIN" >/dev/null 2>&1; then
+	echo "Add $DEST_DIR to your PATH, then run: kubectl analyze-images" >&2
+else
+	echo "Run it with: kubectl analyze-images"
 fi
